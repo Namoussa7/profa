@@ -1,0 +1,1 @@
+package com.profa.school;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface SchoolRepository extends JpaRepository<SchoolProfile,UUID>{Optional<SchoolProfile> findByUserId(UUID id);}

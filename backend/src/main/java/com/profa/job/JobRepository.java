@@ -1,0 +1,1 @@
+package com.profa.job;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface JobRepository extends JpaRepository<JobOffer,UUID>{List<JobOffer> findByStatus(String status);}

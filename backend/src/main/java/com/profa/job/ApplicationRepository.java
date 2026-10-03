@@ -1,0 +1,1 @@
+package com.profa.job;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface ApplicationRepository extends JpaRepository<Application,UUID>{List<Application> findByJobId(UUID jobId);List<Application> findByTeacherId(UUID teacherId);}

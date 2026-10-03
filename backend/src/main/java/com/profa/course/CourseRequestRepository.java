@@ -1,0 +1,1 @@
+package com.profa.course;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface CourseRequestRepository extends JpaRepository<CourseRequest,UUID>{}

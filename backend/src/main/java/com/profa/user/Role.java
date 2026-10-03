@@ -1,0 +1,1 @@
+package com.profa.user; public enum Role { TEACHER,PARENT,SCHOOL,ADMIN }
