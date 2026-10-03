@@ -1,0 +1,39 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:profa}}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:profa}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:profa}}
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 120MB
+
+server:
+  port: ${PORT:${SERVER_PORT:8080}}
+  address: 0.0.0.0
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-this-secret-to-at-least-32-characters-long}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true

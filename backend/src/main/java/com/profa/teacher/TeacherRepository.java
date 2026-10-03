@@ -1,0 +1,1 @@
+package com.profa.teacher;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface TeacherRepository extends JpaRepository<TeacherProfile,UUID>{Optional<TeacherProfile> findByUserId(UUID id);List<TeacherProfile> findByCityContainingIgnoreCaseAndHourlyRateLessThanEqual(String city,Integer rate);List<TeacherProfile> findByVerifiedTrue();}
