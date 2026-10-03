@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-import {Injectable,inject} from '@angular/core';import {HttpClient} from '@angular/common/http';import {Observable} from 'rxjs';@Injectable({providedIn:'root'})export class ApiService{http=inject(HttpClient);get<T>(url:string,params:any={}){return this.http.get<T>(url,{params})}post<T>(url:string,body:any){return this.http.post<T>(url,body)}put<T>(url:string,body:any){return this.http.put<T>(url,body)}patch<T>(url:string,body:any={}){return this.http.patch<T>(url,body)}}
-=======
 import {Injectable,inject} from '@angular/core';import {HttpClient} from '@angular/common/http';import {API_BASE_URL} from './config/api.config';@Injectable({providedIn:'root'})export class ApiService{http=inject(HttpClient);get<T>(url:string,params:any={}){return this.http.get<T>(`${API_BASE_URL}${url}`,{params})}post<T>(url:string,body:any){return this.http.post<T>(`${API_BASE_URL}${url}`,body)}put<T>(url:string,body:any){return this.http.put<T>(`${API_BASE_URL}${url}`,body)}patch<T>(url:string,body:any={},params:any={}){return this.http.patch<T>(`${API_BASE_URL}${url}`,body,{params})}}
->>>>>>> 003f2bd (PROFA V2 - fix frontend API and admin dashboard)
