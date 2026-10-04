@@ -76,24 +76,24 @@ public class AdminController {
         long courseRequestsPending = courseRequests.findAll().stream()
                 .filter(x -> "PENDING".equalsIgnoreCase(x.getStatus())).count();
 
-        return Map.of(
-                "users", users.count(),
-                "activeUsers", activeUsers,
-                "teachers", teachers.count(),
-                "schools", schools.count(),
-                "pendingTeachers", pendingTeachers,
-                "pendingDocuments", pendingDocuments,
-                "jobs", jobs.count(),
-                "openJobs", openJobs,
-                "applications", applications.count(),
-                "courseRequests", courseRequests.count(),
-                "courseRequestsPending", courseRequestsPending,
-                "bookings", bookings.count(),
-                "pendingBookings", pendingBookings,
-                "payments", payments.count(),
-                "pendingPayments", pendingPayments,
-                "reviews", reviews.count()
-        );
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("users", users.count());
+        result.put("activeUsers", activeUsers);
+        result.put("teachers", teachers.count());
+        result.put("schools", schools.count());
+        result.put("pendingTeachers", pendingTeachers);
+        result.put("pendingDocuments", pendingDocuments);
+        result.put("jobs", jobs.count());
+        result.put("openJobs", openJobs);
+        result.put("applications", applications.count());
+        result.put("courseRequests", courseRequests.count());
+        result.put("courseRequestsPending", courseRequestsPending);
+        result.put("bookings", bookings.count());
+        result.put("pendingBookings", pendingBookings);
+        result.put("payments", payments.count());
+        result.put("pendingPayments", pendingPayments);
+        result.put("reviews", reviews.count());
+        return result;
     }
 
     @GetMapping("/users")
