@@ -17,7 +17,7 @@ import {AuthService} from './core/auth/auth.service';
    <div class="actions desktop-actions">
      <a routerLink="/connexion" class="link" *ngIf="!auth.isLogged()">Connexion</a>
      <a routerLink="/inscription" class="btn ghost" *ngIf="!auth.isLogged()">Créer un compte</a>
-     <a routerLink="/dashboard" class="btn" *ngIf="auth.isLogged()">Mon espace</a>
+     <a routerLink="/profil" class="btn ghost" *ngIf="auth.isLogged()">Mon profil</a><a routerLink="/dashboard" class="btn" *ngIf="auth.isLogged()">Mon espace</a>
    </div>
    <button class="mobile-menu" type="button" aria-label="Menu" (click)="menuOpen=!menuOpen">☰</button>
  </header>
@@ -26,7 +26,7 @@ import {AuthService} from './core/auth/auth.service';
    <a routerLink="/emplois" (click)="menuOpen=false">💼 Emplois</a>
    <a routerLink="/connexion" *ngIf="!auth.isLogged()" (click)="menuOpen=false">↪ Connexion</a>
    <a routerLink="/inscription" *ngIf="!auth.isLogged()" (click)="menuOpen=false">✨ Créer un compte</a>
-   <a routerLink="/dashboard" *ngIf="auth.isLogged()" (click)="menuOpen=false">▣ Mon espace</a>
+   <a routerLink="/profil" *ngIf="auth.isLogged()" (click)="menuOpen=false">👤 Mon profil</a><a routerLink="/dashboard" *ngIf="auth.isLogged()" (click)="menuOpen=false">▣ Mon espace</a>
  </div>
  <main><router-outlet/></main>
  <footer>
@@ -38,7 +38,7 @@ import {AuthService} from './core/auth/auth.service';
    <a routerLink="/"><span>⌂</span>Accueil</a>
    <a routerLink="/enseignants"><span>🎓</span>Enseignants</a>
    <a routerLink="/emplois"><span>💼</span>Emplois</a>
-   <a routerLink="/dashboard"><span>◉</span>Espace</a>
+   <a routerLink="/profil" *ngIf="auth.isLogged()"><span>◉</span>Profil</a><a routerLink="/dashboard" *ngIf="auth.isLogged()"><span>⌁</span>Espace</a>
  </nav>`,
  styles:[]
 })
