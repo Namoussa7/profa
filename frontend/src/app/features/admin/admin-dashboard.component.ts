@@ -1,11 +1,12 @@
 import {Component,inject} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
 import {ApiService} from '../../core/api.service';
 import {AuthService} from '../../core/auth/auth.service';
 
 @Component({
  standalone:true,
- imports:[CommonModule],
+ imports:[CommonModule,FormsModule],
  template:`
  <section class="page admin-page">
    <div class="admin-hero">
