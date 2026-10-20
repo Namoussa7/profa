@@ -1,1 +1,41 @@
-package com.profa.job;import jakarta.persistence.*;import java.time.*;import java.util.*;@Entity@Table(name="job_offers")public class JobOffer{@Id@GeneratedValue(strategy=GenerationType.UUID)UUID id;UUID schoolId;String title;String subject;String level;String city;String contractType;Integer salaryMin;Integer salaryMax;@Column(length=5000)String description;String status="OPEN";Instant createdAt=Instant.now();public UUID getId(){return id;}public UUID getSchoolId(){return schoolId;}public void setSchoolId(UUID v){schoolId=v;}public String getTitle(){return title;}public void setTitle(String v){title=v;}public String getSubject(){return subject;}public void setSubject(String v){subject=v;}public String getLevel(){return level;}public void setLevel(String v){level=v;}public String getCity(){return city;}public void setCity(String v){city=v;}public String getContractType(){return contractType;}public void setContractType(String v){contractType=v;}public Integer getSalaryMin(){return salaryMin;}public void setSalaryMin(Integer v){salaryMin=v;}public Integer getSalaryMax(){return salaryMax;}public void setSalaryMax(Integer v){salaryMax=v;}public String getDescription(){return description;}public void setDescription(String v){description=v;}public String getStatus(){return status;}public void setStatus(String v){status=v;}public Instant getCreatedAt(){return createdAt;}}
+package com.profa.job;
+
+import jakarta.persistence.*;
+import java.time.*;
+import java.util.*;
+
+@Entity
+@Table(name = "job_offers")
+public class JobOffer {
+    @Id @GeneratedValue(strategy = GenerationType.UUID) UUID id;
+    /** School's user id. */
+    UUID schoolId;
+    String title;
+    String subject;
+    String level;
+    String city;
+    String contractType;
+    Integer salaryMin;
+    Integer salaryMax;
+    @Column(length = 5000) String description;
+    /** OPEN, CLOSED. */
+    String status = "OPEN";
+    Instant createdAt = Instant.now();
+    @Transient String schoolName;
+    @Transient Long applicationsCount;
+
+    public UUID getId(){return id;}
+    public UUID getSchoolId(){return schoolId;} public void setSchoolId(UUID v){schoolId=v;}
+    public String getTitle(){return title;} public void setTitle(String v){title=v;}
+    public String getSubject(){return subject;} public void setSubject(String v){subject=v;}
+    public String getLevel(){return level;} public void setLevel(String v){level=v;}
+    public String getCity(){return city;} public void setCity(String v){city=v;}
+    public String getContractType(){return contractType;} public void setContractType(String v){contractType=v;}
+    public Integer getSalaryMin(){return salaryMin;} public void setSalaryMin(Integer v){salaryMin=v;}
+    public Integer getSalaryMax(){return salaryMax;} public void setSalaryMax(Integer v){salaryMax=v;}
+    public String getDescription(){return description;} public void setDescription(String v){description=v;}
+    public String getStatus(){return status;} public void setStatus(String v){status=v;}
+    public Instant getCreatedAt(){return createdAt;}
+    public String getSchoolName(){return schoolName;} public void setSchoolName(String v){schoolName=v;}
+    public Long getApplicationsCount(){return applicationsCount;} public void setApplicationsCount(Long v){applicationsCount=v;}
+}

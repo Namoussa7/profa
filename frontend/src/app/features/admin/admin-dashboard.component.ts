@@ -1,3 +1,4 @@
+import {IconComponent} from '../../core/icon.component';
 import {Component,inject} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
@@ -6,7 +7,7 @@ import {AuthService} from '../../core/auth/auth.service';
 
 @Component({
  standalone:true,
- imports:[CommonModule,FormsModule],
+ imports:[IconComponent,CommonModule,FormsModule],
  template:`
  <section class="page admin-page">
    <div class="admin-hero">
@@ -21,12 +22,12 @@ import {AuthService} from '../../core/auth/auth.service';
    <p class="error" *ngIf="error">{{error}}</p>
 
    <div class="stats modern-stats" *ngIf="stats">
-     <div><span class="stat-icon">◎</span><small>Utilisateurs</small><strong>{{stats.users}}</strong><span>{{stats.activeUsers}} actifs</span></div>
-     <div><span class="stat-icon">🎓</span><small>Enseignants</small><strong>{{stats.teachers}}</strong><span>{{stats.pendingTeachers}} à valider</span></div>
-     <div><span class="stat-icon">🏫</span><small>Écoles</small><strong>{{stats.schools}}</strong><span>Établissements</span></div>
-     <div><span class="stat-icon">💼</span><small>Recrutement</small><strong>{{stats.jobs}}</strong><span>{{stats.openJobs}} offres ouvertes</span></div>
-     <div><span class="stat-icon">📄</span><small>Documents</small><strong>{{stats.pendingDocuments}}</strong><span>En attente</span></div>
-     <div><span class="stat-icon">💳</span><small>Paiements</small><strong>{{stats.pendingPayments}}</strong><span>En attente</span></div>
+     <div><span class="stat-icon"><app-icon name="users" [size]="22"/></span><small>Utilisateurs</small><strong>{{stats.users}}</strong><span>{{stats.activeUsers}} actifs</span></div>
+     <div><span class="stat-icon"><app-icon name="cap" [size]="22"/></span><small>Enseignants</small><strong>{{stats.teachers}}</strong><span>{{stats.pendingTeachers}} à valider</span></div>
+     <div><span class="stat-icon"><app-icon name="school" [size]="22"/></span><small>Écoles</small><strong>{{stats.schools}}</strong><span>Établissements</span></div>
+     <div><span class="stat-icon"><app-icon name="briefcase" [size]="22"/></span><small>Recrutement</small><strong>{{stats.jobs}}</strong><span>{{stats.openJobs}} offres ouvertes</span></div>
+     <div><span class="stat-icon"><app-icon name="file" [size]="22"/></span><small>Documents</small><strong>{{stats.pendingDocuments}}</strong><span>En attente</span></div>
+     <div><span class="stat-icon"><app-icon name="wallet" [size]="22"/></span><small>Paiements</small><strong>{{stats.pendingPayments}}</strong><span>En attente</span></div>
    </div>
 
    <div class="admin-tabs">
@@ -36,13 +37,14 @@ import {AuthService} from '../../core/auth/auth.service';
      <button [class.active]="tab==='schools'" (click)="tab='schools';loadSchools()">Écoles</button>
      <button [class.active]="tab==='jobs'" (click)="tab='jobs';loadJobs()">Recrutement</button>
      <button [class.active]="tab==='documents'" (click)="tab='documents';loadDocuments()">Documents</button>
+     <button [class.active]="tab==='bookings'" (click)="tab='bookings';loadBookings()">Réservations</button>
      <button [class.active]="tab==='payments'" (click)="tab='payments';loadPayments()">Paiements</button>
    </div>
 
    <ng-container *ngIf="tab==='overview'">
      <div class="dash-grid admin-grid">
        <article class="card admin-card">
-         <div class="card-title"><span>🎓</span><div><h3>Enseignants à valider</h3><small>Contrôle des nouveaux profils</small></div></div>
+         <div class="card-title"><span><app-icon name="cap"/></span><div><h3>Enseignants à valider</h3><small>Contrôle des nouveaux profils</small></div></div>
          <p *ngIf="!pendingTeachers.length" class="empty-inline">Aucun enseignant en attente.</p>
          <div class="admin-list" *ngFor="let teacher of pendingTeachers">
            <div><strong>{{teacher.headline || 'Profil enseignant'}}</strong><small>{{teacher.city || 'Mali'}} · {{teacher.experienceYears || 0}} an(s)</small></div>
@@ -50,7 +52,7 @@ import {AuthService} from '../../core/auth/auth.service';
          </div>
        </article>
        <article class="card admin-card">
-         <div class="card-title"><span>📄</span><div><h3>Documents à contrôler</h3><small>Diplômes et pièces justificatives</small></div></div>
+         <div class="card-title"><span><app-icon name="file"/></span><div><h3>Documents à contrôler</h3><small>Diplômes et pièces justificatives</small></div></div>
          <p *ngIf="!documents.length" class="empty-inline">Aucun document.</p>
          <div class="admin-list" *ngFor="let doc of documents">
            <div><strong>{{doc.type || 'Document'}}</strong><small>{{doc.status}}</small></div>
@@ -85,16 +87,18 @@ import {AuthService} from '../../core/auth/auth.service';
 
    <ng-container *ngIf="tab==='documents'"><div class="card admin-table-card"><h3>Pièces justificatives</h3><div class="admin-table"><div class="admin-table-row" *ngFor="let d of documents"><span><strong>{{d.type||'Document'}}</strong><small>{{d.fileUrl||'Fichier non renseigné'}}</small></span><span>{{d.status}}</span><span class="row-actions" *ngIf="d.status==='PENDING'"><button class="btn small" (click)="setDocumentStatus(d.id,'APPROVED')">Approuver</button><button class="btn small danger" (click)="setDocumentStatus(d.id,'REJECTED')">Refuser</button></span></div></div></div></ng-container>
 
+   <ng-container *ngIf="tab==='bookings'"><div class="card admin-table-card"><h3>Réservations</h3><div class="admin-table"><div class="admin-table-row" *ngFor="let b of bookings"><span><strong>{{b.parentName}} → {{b.teacherName}}</strong><small>{{b.startsAt | date:'d MMM y HH:mm'}} · {{b.mode}}</small></span><span>{{b.status}} · {{b.paymentStatus}}</span><span>{{b.amount||0 | number}} FCFA</span><span class="row-actions"><button class="btn small danger" *ngIf="b.status!=='CANCELLED'&&b.status!=='COMPLETED'" (click)="setBookingStatus(b.id,'CANCELLED')">Annuler</button></span></div><p class="empty-inline" *ngIf="!bookings.length">Aucune réservation.</p></div></div></ng-container>
+
    <ng-container *ngIf="tab==='payments'"><div class="card admin-table-card"><h3>Paiements</h3><div class="admin-table"><div class="admin-table-row" *ngFor="let p of payments"><span><strong>{{p.amount||0 | number}} {{p.currency||'XOF'}}</strong><small>{{p.provider||'—'}} · {{p.method||'—'}}</small></span><span>{{p.status}}</span><span>{{p.externalReference||'—'}}</span><button class="btn small" *ngIf="p.status==='PENDING'" (click)="setPaymentStatus(p.id,'CONFIRMED')">Confirmer</button></div></div></div></ng-container>
  </section>`,
 })
 export class AdminDashboardComponent {
  api=inject(ApiService);
  auth=inject(AuthService);
- stats:any=null; pendingTeachers:any[]=[]; documents:any[]=[]; users:any[]=[]; teachers:any[]=[]; schools:any[]=[]; jobs:any[]=[]; payments:any[]=[];
+ stats:any=null; pendingTeachers:any[]=[]; documents:any[]=[]; users:any[]=[]; teachers:any[]=[]; schools:any[]=[]; jobs:any[]=[]; payments:any[]=[]; bookings:any[]=[];
  error=''; tab='overview'; search='';
 
- ngOnInit(){if(this.auth.role()!=='ADMIN'){this.auth.router.navigateByUrl('/dashboard');return}this.load()}
+ ngOnInit(){this.load()}
 
  load(){
    this.error='';
@@ -106,10 +110,12 @@ export class AdminDashboardComponent {
  loadSchools(){this.api.get<any[]>('/api/v1/admin/schools').subscribe({next:x=>this.schools=x,error:()=>this.error='Impossible de charger les écoles.'})}
  loadJobs(){this.api.get<any[]>('/api/v1/admin/jobs').subscribe({next:x=>this.jobs=x,error:()=>this.error='Impossible de charger les offres.'})}
  loadDocuments(){this.api.get<any[]>('/api/v1/admin/documents').subscribe({next:x=>this.documents=x,error:()=>{}})}
+ loadBookings(){this.api.get<any[]>('/api/v1/bookings').subscribe({next:x=>this.bookings=x,error:()=>this.error='Impossible de charger les réservations.'})}
+ setBookingStatus(id:string,status:string){this.api.patch(`/api/v1/admin/bookings/${id}/status`,{},{status}).subscribe({next:()=>this.loadBookings(),error:()=>this.error='La mise à jour de la réservation a échoué.'})}
  loadPayments(){this.api.get<any[]>('/api/v1/admin/payments').subscribe({next:x=>this.payments=x,error:()=>this.error='Impossible de charger les paiements.'})}
  filteredUsers(){const q=this.search.trim().toLowerCase();return q?this.users.filter(u=>((u.firstName||'')+' '+(u.lastName||'')+' '+(u.email||'')).toLowerCase().includes(q)):this.users}
  verifyTeacher(id:string){this.api.patch(`/api/v1/admin/teachers/${id}/verify`,{}).subscribe({next:()=>this.loadTeachers(),error:()=>this.error='La validation de cet enseignant a échoué.'})}
- setDocumentStatus(id:string,status:string){this.api.patch(`/api/v1/admin/documents/${id}`,{},{status}).subscribe({next:()=>this.loadDocuments(),error:()=>this.error='La mise à jour du document a échoué.'})}
+ setDocumentStatus(id:string,status:string){let reason:string|null=null;if(status==='REJECTED'){reason=prompt('Motif du refus (communiqué à l’enseignant) :');if(reason===null)return}this.api.patch(`/api/v1/admin/documents/${id}`,{},{status,reason}).subscribe({next:()=>this.loadDocuments(),error:()=>this.error='La mise à jour du document a échoué.'})}
  toggleUser(u:any){this.api.patch(`/api/v1/admin/users/${u.id}/enabled`,{},{enabled:!u.enabled}).subscribe({next:()=>this.loadUsers(),error:()=>this.error='La modification du compte a échoué.'})}
  verifyUser(u:any){this.api.patch(`/api/v1/admin/users/${u.id}/verified`,{},{verified:!u.verified}).subscribe({next:()=>this.loadUsers(),error:()=>this.error='La vérification a échoué.'})}
  setJobStatus(id:string,status:string){this.api.patch(`/api/v1/admin/jobs/${id}/status`,{},{status}).subscribe({next:()=>this.loadJobs(),error:()=>this.error='La modification de l’offre a échoué.'})}

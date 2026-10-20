@@ -1,1 +1,9 @@
-package com.profa.messaging;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface ConversationRepository extends JpaRepository<Conversation,UUID>{}
+package com.profa.messaging;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.*;
+
+public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
+    List<Conversation> findByUserAOrUserBOrderByUpdatedAtDesc(UUID userA, UUID userB);
+}

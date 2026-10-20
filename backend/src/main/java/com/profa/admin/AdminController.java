@@ -9,7 +9,10 @@ import com.profa.booking.*;
 import com.profa.payment.*;
 import com.profa.review.*;
 import com.profa.course.*;
+import com.profa.notification.NotificationService;
+import com.profa.security.CurrentUser;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
@@ -28,6 +31,8 @@ public class AdminController {
     final PaymentRepository payments;
     final ReviewRepository reviews;
     final CourseRequestRepository courseRequests;
+    final PaymentService paymentService;
+    final NotificationService notifications;
 
     public AdminController(
             UserRepository users,
@@ -39,7 +44,9 @@ public class AdminController {
             BookingRepository bookings,
             PaymentRepository payments,
             ReviewRepository reviews,
-            CourseRequestRepository courseRequests) {
+            CourseRequestRepository courseRequests,
+            PaymentService paymentService,
+            NotificationService notifications) {
         this.users = users;
         this.teachers = teachers;
         this.schools = schools;
@@ -50,6 +57,8 @@ public class AdminController {
         this.payments = payments;
         this.reviews = reviews;
         this.courseRequests = courseRequests;
+        this.paymentService = paymentService;
+        this.notifications = notifications;
     }
 
     @GetMapping("/stats")
@@ -102,7 +111,8 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{id}/enabled")
-    public User setUserEnabled(@PathVariable UUID id, @RequestParam boolean enabled) {
+    public User setUserEnabled(Authentication a, @PathVariable UUID id, @RequestParam boolean enabled) {
+        if (!enabled && CurrentUser.id(a).equals(id)) throw CurrentUser.badRequest("Vous ne pouvez pas bloquer votre propre compte");
         User user = users.findById(id).orElseThrow();
         user.setEnabled(enabled);
         return users.save(user);
@@ -131,6 +141,17 @@ public class AdminController {
     public TeacherProfile verify(@PathVariable UUID id) {
         TeacherProfile p = teachers.findById(id).orElseThrow();
         p.setVerified(true);
+        TeacherProfile saved = teachers.save(p);
+        users.findById(p.getUserId()).ifPresent(u -> { u.setVerified(true); users.save(u); });
+        notifications.notify(p.getUserId(), "VERIFICATION", "Profil vérifié ✓",
+                "Votre profil enseignant est désormais vérifié et mis en avant dans la recherche.", "/enseignants/" + p.getId());
+        return saved;
+    }
+
+    @PatchMapping("/teachers/{id}/unverify")
+    public TeacherProfile unverify(@PathVariable UUID id) {
+        TeacherProfile p = teachers.findById(id).orElseThrow();
+        p.setVerified(false);
         return teachers.save(p);
     }
 
@@ -140,10 +161,19 @@ public class AdminController {
     }
 
     @PatchMapping("/documents/{id}")
-    public TeacherDocument document(@PathVariable UUID id, @RequestParam String status) {
+    public TeacherDocument document(@PathVariable UUID id, @RequestParam String status,
+                                    @RequestParam(required = false) String reason) {
         TeacherDocument d = docs.findById(id).orElseThrow();
-        d.setStatus(status.toUpperCase(Locale.ROOT));
-        return docs.save(d);
+        String next = status.toUpperCase(Locale.ROOT);
+        if (!Set.of("PENDING", "APPROVED", "REJECTED").contains(next)) throw CurrentUser.badRequest("Statut invalide");
+        d.setStatus(next);
+        d.setRejectionReason("REJECTED".equals(next) ? reason : null);
+        TeacherDocument saved = docs.save(d);
+        notifications.notify(d.getTeacherId(), "DOCUMENT",
+                "APPROVED".equals(next) ? "Document approuvé" : "REJECTED".equals(next) ? "Document refusé" : "Document en attente",
+                "REJECTED".equals(next) && reason != null ? "Motif : " + reason : "Votre document " + d.getType() + " a été traité.",
+                "/dashboard");
+        return saved;
     }
 
     @GetMapping("/schools")
@@ -188,7 +218,9 @@ public class AdminController {
     @PatchMapping("/bookings/{id}/status")
     public Booking setBookingStatus(@PathVariable UUID id, @RequestParam String status) {
         Booking booking = bookings.findById(id).orElseThrow();
-        booking.setStatus(status.toUpperCase(Locale.ROOT));
+        String next = status.toUpperCase(Locale.ROOT);
+        if (!Set.of("PENDING_PAYMENT", "CONFIRMED", "COMPLETED", "CANCELLED").contains(next)) throw CurrentUser.badRequest("Statut invalide");
+        booking.setStatus(next);
         return bookings.save(booking);
     }
 
@@ -200,8 +232,7 @@ public class AdminController {
     @PatchMapping("/payments/{id}/status")
     public Payment setPaymentStatus(@PathVariable UUID id, @RequestParam String status) {
         Payment payment = payments.findById(id).orElseThrow();
-        payment.setStatus(status.toUpperCase(Locale.ROOT));
-        return payments.save(payment);
+        return paymentService.apply(payment, status);
     }
 
     @GetMapping("/reviews")

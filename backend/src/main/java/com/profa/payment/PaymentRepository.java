@@ -1,1 +1,10 @@
-package com.profa.payment;import org.springframework.data.jpa.repository.JpaRepository;import java.util.*;public interface PaymentRepository extends JpaRepository<Payment,UUID>{}
+package com.profa.payment;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.*;
+
+public interface PaymentRepository extends JpaRepository<Payment, UUID> {
+    Optional<Payment> findByExternalReference(String externalReference);
+    List<Payment> findByPayerIdOrderByCreatedAtDesc(UUID payerId);
+}
