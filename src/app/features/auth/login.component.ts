@@ -21,6 +21,7 @@ import {errorMessage} from '../../core/api.service';
        <label>Mot de passe
          <span class="pwd"><input name="password" [type]="show?'text':'password'" autocomplete="current-password" [(ngModel)]="form.password" placeholder="••••••••" required><button type="button" (click)="show=!show" [attr.aria-label]="show?'Masquer le mot de passe':'Afficher le mot de passe'"><app-icon name="eye" [size]="18"/></button></span>
        </label>
+       <a class="forgot-link" routerLink="/mot-de-passe-oublie">Mot de passe oublié ?</a>
        <button class="btn big full" [disabled]="loading||f.invalid">{{loading?'Connexion…':'Se connecter'}} @if(!loading){<app-icon name="arrow" [size]="18"/>}</button>
      </form>
      <p class="error" role="alert">{{error}}</p>

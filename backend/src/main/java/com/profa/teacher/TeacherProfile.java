@@ -29,6 +29,11 @@ public class TeacherProfile {
     /** Comma separated among ONLINE, HOME, CENTER. */
     private String teachingModes;
     private Boolean trialLessonFree = false;
+    /** CV and diploma PDFs uploaded and not rejected: required to appear publicly. */
+    private boolean documentsComplete;
+    /** Denormalized from reviews for fast sorting/search at scale. */
+    private double ratingAvg;
+    private int reviewCount;
     private Instant updatedAt = Instant.now();
 
     public UUID getId(){return id;}
@@ -50,5 +55,8 @@ public class TeacherProfile {
     public String getLevels(){return levels;} public void setLevels(String v){levels=v;}
     public String getTeachingModes(){return teachingModes;} public void setTeachingModes(String v){teachingModes=v;}
     public boolean isTrialLessonFree(){return Boolean.TRUE.equals(trialLessonFree);} public void setTrialLessonFree(Boolean v){trialLessonFree=v;}
+    public boolean isDocumentsComplete(){return documentsComplete;} public void setDocumentsComplete(boolean v){documentsComplete=v;}
+    public double getRatingAvg(){return ratingAvg;} public void setRatingAvg(double v){ratingAvg=v;}
+    public int getReviewCount(){return reviewCount;} public void setReviewCount(int v){reviewCount=v;}
     public Instant getUpdatedAt(){return updatedAt;} public void setUpdatedAt(Instant v){updatedAt=v;}
 }

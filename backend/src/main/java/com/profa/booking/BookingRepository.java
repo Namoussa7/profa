@@ -7,4 +7,5 @@ import java.util.*;
 public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByParentIdOrderByStartsAtDesc(UUID parentId);
     List<Booking> findByTeacherIdOrderByStartsAtDesc(UUID teacherId);
+    long countByStatus(String status);
 }

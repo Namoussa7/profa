@@ -4,10 +4,12 @@ export const LEVELS=['Fondamental 1','Fondamental 2 (DEF)','Lycée (BAC)','Unive
 export const CITIES=['Bamako','Kati','Ségou','Sikasso','Mopti','Kayes','Koutiala','Gao','Tombouctou'];
 export const MODES:{[k:string]:string}={ONLINE:'En ligne',HOME:'À domicile',CENTER:'Chez l’enseignant'};
 export const CONTRACTS=['CDI','CDD','Vacataire','Stage','Temps partiel'];
-export const DOC_TYPES:{[k:string]:string}={DIPLOMA:'Diplôme',ID_CARD:'Pièce d’identité',CV:'CV',CRIMINAL_RECORD:'Casier judiciaire',CERTIFICATE:'Attestation',OTHER:'Autre'};
+export const DOC_TYPES:{[k:string]:string}={CV:'CV',DIPLOMA:'Diplôme',ID_CARD:'Pièce d’identité',CERTIFICATE:'Attestation',CRIMINAL_RECORD:'Casier judiciaire',OTHER:'Autre'};
 export const PAY_METHODS:{[k:string]:string}={ORANGE_MONEY:'Orange Money',MOOV_MONEY:'Moov Money',WAVE:'Wave',CARD:'Carte bancaire',CASH:'Espèces (au cours)'};
 
+export const ROLES:{[k:string]:string}={PARENT:'Parent / Élève',TEACHER:'Enseignant',SCHOOL:'École',ADMIN:'Administrateur'};
 export const STATUS:{[k:string]:string}={
+ ACTIVE:'Actif',BLOCKED:'Bloqué',INCOMPLETE:'Dossier incomplet',VERIFIED:'Vérifié',
  PENDING:'En attente',ACCEPTED:'Acceptée',DECLINED:'Refusée',CANCELLED:'Annulée',
  PENDING_PAYMENT:'À payer',CONFIRMED:'Confirmée',COMPLETED:'Terminée',
  UNPAID:'Non payé',PAID:'Payé',REFUNDED:'Remboursé',FAILED:'Échoué',
@@ -22,3 +24,13 @@ export function modes(csv:string|null|undefined){return list(csv).map(m=>MODES[m
 export function stars(avg:number){const r=Math.round(avg||0);return '★'.repeat(r)+'☆'.repeat(5-r)}
 export function initials(first?:string,last?:string){return ((first||'')[0]||'P').toUpperCase()+((last||'')[0]||'').toUpperCase()}
 export function statusClass(s:string){return ['ACCEPTED','CONFIRMED','COMPLETED','PAID','APPROVED','OPEN','HIRED','SHORTLISTED'].includes(s)?'ok':['DECLINED','CANCELLED','REJECTED','FAILED','CLOSED'].includes(s)?'ko':'wait'}
+
+/** Same rules as the backend (8+ chars, a letter and a digit), for live feedback. */
+export function passwordIssues(p:string){
+ return [
+  {label:'8 caractères minimum',ok:(p||'').length>=8},
+  {label:'Au moins une lettre',ok:/[A-Za-z]/.test(p||'')},
+  {label:'Au moins un chiffre',ok:/\d/.test(p||'')},
+ ];
+}
+export const REQUIRED_DOCS=['CV','DIPLOMA'];

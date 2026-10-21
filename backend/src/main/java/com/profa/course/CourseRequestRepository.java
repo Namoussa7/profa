@@ -7,5 +7,6 @@ import java.util.*;
 public interface CourseRequestRepository extends JpaRepository<CourseRequest, UUID> {
     List<CourseRequest> findByParentIdOrderByCreatedAtDesc(UUID parentId);
     List<CourseRequest> findByTeacherIdOrderByCreatedAtDesc(UUID teacherId);
-    List<CourseRequest> findByTeacherIdIsNullAndStatusOrderByCreatedAtDesc(String status);
+    List<CourseRequest> findTop50ByTeacherIdIsNullAndStatusOrderByCreatedAtDesc(String status);
+    long countByStatus(String status);
 }

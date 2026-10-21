@@ -8,4 +8,5 @@ public interface JobRepository extends JpaRepository<JobOffer, UUID> {
     List<JobOffer> findByStatus(String status);
     List<JobOffer> findByStatusOrderByCreatedAtDesc(String status);
     List<JobOffer> findBySchoolIdOrderByCreatedAtDesc(UUID schoolId);
+    long countByStatus(String status);
 }

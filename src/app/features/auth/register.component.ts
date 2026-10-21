@@ -5,6 +5,7 @@ import {FormsModule} from '@angular/forms';
 import {ActivatedRoute,Router,RouterLink} from '@angular/router';
 import {AuthService} from '../../core/auth/auth.service';
 import {errorMessage} from '../../core/api.service';
+import {passwordIssues} from '../../core/labels';
 
 @Component({
  standalone:true,
@@ -20,9 +21,11 @@ import {errorMessage} from '../../core/api.service';
        <div class="two"><label>{{form.role==='SCHOOL'?'Prénom du responsable':'Prénom'}}<input name="firstName" autocomplete="given-name" [(ngModel)]="form.firstName" placeholder="Votre prénom" required></label><label>Nom<input name="lastName" autocomplete="family-name" [(ngModel)]="form.lastName" placeholder="Votre nom" required></label></div>
        <label>Email<input name="email" type="email" autocomplete="email" [(ngModel)]="form.email" placeholder="vous@exemple.com" required email></label>
        <label>Téléphone / WhatsApp <span class="optional">(facultatif)</span><input name="phone" type="tel" autocomplete="tel" [(ngModel)]="form.phone" placeholder="+223 ..."></label>
-       <label>Mot de passe<input name="password" type="password" autocomplete="new-password" [(ngModel)]="form.password" placeholder="8 caractères minimum" required minlength="8"></label>
+       <label>Mot de passe<input name="password" type="password" autocomplete="new-password" [(ngModel)]="form.password" placeholder="8 caractères, une lettre et un chiffre" required minlength="8"></label>
+       @if(form.password){<ul class="pwd-rules">@for(r of rules();track r.label){<li [class.ok]="r.ok"><app-icon [name]="r.ok?'check':'x'" [size]="14"/>{{r.label}}</li>}</ul>}
+       @if(form.role==='TEACHER'){<p class="notice"><app-icon name="file" [size]="18"/> Après l’inscription, vous devrez envoyer votre <b>CV</b> et votre <b>diplôme</b> en PDF pour apparaître dans la recherche.</p>}
        <label class="check"><input type="checkbox" name="terms" [(ngModel)]="terms" required> J’accepte les conditions d’utilisation et la politique de confidentialité de Profa.</label>
-       <button class="btn big full" [disabled]="loading||f.invalid||!terms">{{loading?'Création…':'Créer mon compte'}} <app-icon name="arrow" [size]="18"/></button>
+       <button class="btn big full" [disabled]="loading||f.invalid||!terms||!pwdOk()">{{loading?'Création…':'Créer mon compte'}} <app-icon name="arrow" [size]="18"/></button>
      </form>
      <p class="error" role="alert">{{error}}</p>
      <div class="auth-footer">Déjà inscrit ? <a routerLink="/connexion">Se connecter</a></div>
@@ -33,11 +36,13 @@ export class RegisterComponent {
  auth=inject(AuthService);router=inject(Router);route=inject(ActivatedRoute);
  form:any={role:['PARENT','TEACHER','SCHOOL'].includes(this.route.snapshot.queryParamMap.get('role')||'')?this.route.snapshot.queryParamMap.get('role'):'PARENT'};
  error='';loading=false;terms=false;
+ rules(){return passwordIssues(this.form.password)}
+ pwdOk(){return this.rules().every(r=>r.ok)}
  submit(){
   this.loading=true;this.error='';
   this.auth.register(this.form).subscribe({
    // Teachers and schools are sent to their profile first (onboarding), like Preply / Superprof.
-   next:()=>this.router.navigateByUrl(this.form.role==='PARENT'?'/enseignants':'/profil?onboarding=1'),
+   next:()=>this.router.navigateByUrl(this.form.role==='PARENT'?'/enseignants':this.form.role==='TEACHER'?'/dashboard?onboarding=1':'/profil?onboarding=1'),
    error:e=>{this.error=errorMessage(e,'Inscription impossible');this.loading=false}
   });
  }

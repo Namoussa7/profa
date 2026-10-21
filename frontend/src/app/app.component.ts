@@ -6,6 +6,7 @@ import {CommonModule} from '@angular/common';
 import {filter} from 'rxjs';
 import {AuthService} from './core/auth/auth.service';
 import {ApiService} from './core/api.service';
+import {API_BASE_URL} from './core/config/api.config';
 
 @Component({
  selector:'app-root',
@@ -58,6 +59,7 @@ import {ApiService} from './core/api.service';
      <a href="" (click)="$event.preventDefault();menuOpen=false;auth.logout()"><app-icon name="logout"/>Déconnexion</a>
    }
  </div>
+ @if(waking){<div class="wake-banner" role="status"><span class="spinner"></span>Démarrage du serveur Profa… cela peut prendre jusqu’à une minute la première fois.</div>}
  <main id="main"><router-outlet/></main>
  <footer>
    <div><a routerLink="/" class="footer-brand" aria-label="Profa, accueil"><app-logo [size]="36" [light]="true"/></a><p>La plateforme qui connecte les talents de l'éducation au Mali et en Afrique.</p></div>
@@ -82,7 +84,18 @@ export class AppComponent implements OnInit,OnDestroy{
  menuOpen=false;notifsOpen=false;notifs:any[]=[];unreadNotifs=0;unreadMessages=0;
  private timer:any;
 
+ /** Free hosting puts the API to sleep: wake it up immediately and tell the user if it is slow. */
+ waking=false;
+ private wake(){
+  let done=false;
+  const slow=setTimeout(()=>{if(!done)this.waking=true},2500);
+  const ping=(tries:number)=>this.api.http.get(`${API_BASE_URL}/actuator/health`).subscribe({
+   next:()=>{done=true;clearTimeout(slow);this.waking=false},
+   error:()=>{if(tries>0)setTimeout(()=>ping(tries-1),5000);else{done=true;this.waking=false}}});
+  ping(12);
+ }
  ngOnInit(){
+  this.wake();
   this.refresh();
   this.timer=setInterval(()=>this.refresh(),30000);
   this.router.events.pipe(filter(e=>e instanceof NavigationEnd)).subscribe(()=>{this.notifsOpen=false;this.menuOpen=false;this.refresh()});

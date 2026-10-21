@@ -14,22 +14,22 @@ import {CITIES,LEVELS,MODES,SUBJECTS,initials,list,modes,stars} from '../core/la
  <section class="page">
    <div class="page-hero">
      <div><div class="eyebrow">MARKETPLACE B2C</div><h1>Trouvez votre enseignant.</h1><p>Comparez les profils, les tarifs et les avis des parents. À domicile, chez l’enseignant ou en ligne.</p></div>
-     <div class="result-badge"><app-icon name="users" [size]="16"/> <strong>{{teachers.length}}</strong> profil(s)</div>
+     <div class="result-badge"><app-icon name="users" [size]="16"/> <strong>{{total}}</strong> profil(s)</div>
    </div>
    <form class="search-panel big-search" (ngSubmit)="apply()" role="search">
-     <label class="field"><app-icon name="book" [size]="18"/><input name="subject" [(ngModel)]="f.subject" list="t-subjects" placeholder="Matière" aria-label="Matière"></label>
+     <label class="field"><app-icon name="book" [size]="18"/><input name="subject" [(ngModel)]="f.subject" (ngModelChange)="typed()" list="t-subjects" placeholder="Matière" aria-label="Matière"></label>
      <datalist id="t-subjects">@for(s of SUBJECTS;track s){<option [value]="s"></option>}</datalist>
-     <label class="field"><app-icon name="pin" [size]="18"/><input name="city" [(ngModel)]="f.city" list="t-cities" placeholder="Ville ou quartier" aria-label="Ville"></label>
+     <label class="field"><app-icon name="pin" [size]="18"/><input name="city" [(ngModel)]="f.city" (ngModelChange)="typed()" list="t-cities" placeholder="Ville ou quartier" aria-label="Ville"></label>
      <datalist id="t-cities">@for(c of CITIES;track c){<option [value]="c"></option>}</datalist>
-     <label class="field"><app-icon name="wallet" [size]="18"/><input name="maxRate" type="number" min="0" step="500" [(ngModel)]="f.maxRate" placeholder="Tarif max (FCFA/h)" aria-label="Tarif maximum"></label>
+     <label class="field"><app-icon name="wallet" [size]="18"/><input name="maxRate" type="number" (ngModelChange)="typed()" min="0" step="500" [(ngModel)]="f.maxRate" placeholder="Tarif max (FCFA/h)" aria-label="Tarif maximum"></label>
      <button class="btn"><app-icon name="search" [size]="18"/>Rechercher</button>
    </form>
    <div class="filters">
-     <select [(ngModel)]="f.level" (change)="apply()" aria-label="Niveau"><option value="">Tous niveaux</option>@for(l of LEVELS;track l){<option [value]="l">{{l}}</option>}</select>
-     <select [(ngModel)]="f.mode" (change)="apply()" aria-label="Mode de cours"><option value="">Tous les modes</option>@for(m of modeKeys;track m){<option [value]="m">{{MODES[m]}}</option>}</select>
-     <label class="toggle"><input type="checkbox" [(ngModel)]="f.verified" (change)="apply()"> Vérifiés uniquement</label>
-     <label class="toggle"><input type="checkbox" [(ngModel)]="f.trial" (change)="apply()"> 1er cours offert</label>
-     <select class="sort" [(ngModel)]="f.sort" (change)="apply()" aria-label="Trier par"><option value="relevance">Pertinence</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option><option value="experience">Plus d’expérience</option></select>
+     <select [(ngModel)]="f.level" (ngModelChange)="apply()" aria-label="Niveau"><option value="">Tous niveaux</option>@for(l of LEVELS;track l){<option [value]="l">{{l}}</option>}</select>
+     <select [(ngModel)]="f.mode" (ngModelChange)="apply()" aria-label="Mode de cours"><option value="">Tous les modes</option>@for(m of modeKeys;track m){<option [value]="m">{{MODES[m]}}</option>}</select>
+     <label class="toggle"><input type="checkbox" [(ngModel)]="f.verified" (ngModelChange)="apply()"> Vérifiés uniquement</label>
+     <label class="toggle"><input type="checkbox" [(ngModel)]="f.trial" (ngModelChange)="apply()"> 1er cours offert</label>
+     <select class="sort" [(ngModel)]="f.sort" (ngModelChange)="apply()" aria-label="Trier par"><option value="relevance">Pertinence</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option><option value="experience">Plus d’expérience</option></select>
      @if(active()){<button type="button" class="text-link" (click)="reset()">Effacer les filtres</button>}
    </div>
    @if(error){<p class="error" role="alert">{{error}}</p>}
@@ -50,14 +50,16 @@ import {CITIES,LEVELS,MODES,SUBJECTS,initials,list,modes,stars} from '../core/la
      } @empty {
        @if(!loading){<div class="empty"><span><app-icon name="cap" [size]="28"/></span><h3>Aucun profil trouvé</h3><p>Essayez une autre ville, un autre niveau ou augmentez votre tarif maximum.</p>@if(active()){<button class="btn ghost" (click)="reset()">Effacer les filtres</button>}</div>}
      }
-     @if(loading&&!teachers.length){@for(i of [1,2,3];track i){<div class="modern-card skeleton"></div>}}
+     @if(loading&&!teachers.length){@for(i of [1,2,3,4,5,6];track i){<div class="modern-card skeleton"></div>}}
    </div>
+   @if(page+1<totalPages){<div class="load-more"><button class="btn ghost big" (click)="more()" [disabled]="loading">{{loading?'Chargement…':'Afficher plus d’enseignants'}}</button><small>{{teachers.length}} sur {{total}}</small></div>}
  </section>`
 })
 export class TeachersComponent implements OnInit{
  api=inject(ApiService);auth=inject(AuthService);route=inject(ActivatedRoute);router=inject(Router);
  SUBJECTS=SUBJECTS;CITIES=CITIES;LEVELS=LEVELS;MODES=MODES;modeKeys=Object.keys(MODES);stars=stars;
- teachers:any[]=[];favs=new Set<string>();loading=false;error='';
+ teachers:any[]=[];favs=new Set<string>();loading=false;error='';page=0;total=0;totalPages=0;
+ private debounce:any;private seq=0;
  f:any={subject:'',city:'',level:'',mode:'',maxRate:null,verified:false,trial:false,sort:'relevance'};
 
  ngOnInit(){
@@ -71,7 +73,16 @@ export class TeachersComponent implements OnInit{
  apply(){const f=this.f;this.router.navigate([],{queryParams:{subject:f.subject||null,city:f.city||null,level:f.level||null,mode:f.mode||null,maxRate:f.maxRate||null,verified:f.verified||null,trial:f.trial||null,sort:f.sort!=='relevance'?f.sort:null}})}
  reset(){this.router.navigate([],{queryParams:{}})}
  active(){const f=this.f;return !!(f.subject||f.city||f.level||f.mode||f.maxRate||f.verified||f.trial)}
- load(){this.loading=true;this.error='';this.api.get<any[]>('/api/v1/teachers',this.f).subscribe({next:x=>{this.teachers=x;this.loading=false},error:()=>{this.error='Impossible de charger les enseignants. Réessayez dans un instant.';this.loading=false}})}
+ /** Search while typing (300 ms pause) without spamming the API. */
+ typed(){clearTimeout(this.debounce);this.debounce=setTimeout(()=>this.apply(),350)}
+ load(append=false){
+  if(!append)this.page=0;
+  const mine=++this.seq;this.loading=true;this.error='';
+  this.api.get<any>('/api/v1/teachers',{...this.f,page:this.page,size:12}).subscribe({
+   next:x=>{if(mine!==this.seq)return;this.teachers=append?[...this.teachers,...x.content]:x.content;this.total=x.totalElements;this.totalPages=x.totalPages;this.loading=false},
+   error:()=>{if(mine!==this.seq)return;this.error='Impossible de charger les enseignants. Réessayez dans un instant.';this.loading=false}});
+ }
+ more(){this.page++;this.load(true)}
  toggleFav(t:any){
   if(!this.auth.isLogged()){this.router.navigate(['/connexion'],{queryParams:{next:this.router.url}});return}
   const on=this.favs.has(t.userId);

@@ -7,4 +7,5 @@ import java.util.*;
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findByExternalReference(String externalReference);
     List<Payment> findByPayerIdOrderByCreatedAtDesc(UUID payerId);
+    long countByStatus(String status);
 }

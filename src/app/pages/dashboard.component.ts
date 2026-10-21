@@ -5,7 +5,7 @@ import {FormsModule} from '@angular/forms';
 import {Router,RouterLink} from '@angular/router';
 import {ApiService,errorMessage} from '../core/api.service';
 import {AuthService} from '../core/auth/auth.service';
-import {APP_STATUSES,DOC_TYPES,MODES,PAY_METHODS,STATUS,label,list,statusClass} from '../core/labels';
+import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list,statusClass} from '../core/labels';
 
 @Component({
  standalone:true,
@@ -16,6 +16,29 @@ import {APP_STATUSES,DOC_TYPES,MODES,PAY_METHODS,STATUS,label,list,statusClass} 
      <div class="dash-actions"><a class="btn ghost" routerLink="/profil"><app-icon name="edit" [size]="18"/>Mon profil</a>@if(role==='ADMIN'){<a class="btn" routerLink="/admin">Administration</a>}<button class="btn ghost" (click)="auth.logout()">Déconnexion</button></div></div>
    @if(flash){<p class="success" role="status">{{flash}}</p>}
    @if(error){<p class="error" role="alert">{{error}}</p>}
+
+   @if(role==='TEACHER'&&docsLoaded){
+   <article class="card mandatory" [class.done]="docsComplete()">
+     <div class="section-row"><div><h3><span class="h-ic"><app-icon [name]="docsComplete()?'check':'shield'" [size]="18"/></span>{{docsComplete()?'Dossier enseignant complet':'Étape obligatoire : votre dossier enseignant'}}</h3>
+       <small>{{docsComplete()?'Votre CV et votre diplôme sont enregistrés. L’équipe Profa les vérifie pour vous attribuer le badge « Vérifié ».':'Envoyez votre CV et votre diplôme au format PDF (5 Mo max chacun). Sans ces deux documents, votre profil n’apparaît pas dans la recherche et vous ne pouvez ni accepter de cours ni postuler.'}}</small></div></div>
+     <div class="doc-tiles">
+       @for(t of REQUIRED_DOCS;track t){
+         <div class="doc-tile" [class.ok]="docOk(t)" [class.ko]="docFor(t)?.status==='REJECTED'">
+           <div class="doc-head"><span class="doc-ic"><app-icon name="file" [size]="22"/></span><div><strong>{{DOC_TYPES[t]}}</strong><small>PDF obligatoire</small></div>
+             @if(docFor(t); as d){<span class="status" [class]="sc(d.status)">{{L(STATUS,d.status)}}</span>}@else{<span class="status ko">Manquant</span>}</div>
+           @if(docFor(t); as d){
+             @if(d.hasFile){<p class="doc-file"><app-icon name="file" [size]="14"/>{{d.fileName}} · {{kb(d.sizeBytes)}}</p>}
+             @if(d.rejectionReason){<p class="error small">Refusé : {{d.rejectionReason}}</p>}
+           }
+           <div class="row-actions">
+             @if(docFor(t)?.hasFile){<button class="btn small ghost" (click)="viewDoc(docFor(t))"><app-icon name="eye" [size]="16"/>Voir</button>}
+             <label class="btn small file-btn" [class.ghost]="docOk(t)">{{uploading[t]?'Envoi en cours…':(docFor(t)?.hasFile?'Remplacer':'Envoyer le PDF')}}<input type="file" accept="application/pdf,.pdf" (change)="uploadDoc(t,$event)" hidden [disabled]="uploading[t]"></label>
+           </div>
+         </div>
+       }
+     </div>
+   </article>
+   }
 
    @if(role==='TEACHER'||role==='SCHOOL'){
    <div class="welcome-strip"><div><span><app-icon name="sparkle" [size]="22"/></span><div><strong>{{completion<100?'Complétez votre profil':'Profil complet'}}</strong><p>{{completion<100?'Un profil complet apparaît plus haut dans les résultats et inspire confiance.':'Votre profil est prêt à recevoir des '+(role==='TEACHER'?'élèves.':'candidatures.')}}</p></div></div>
@@ -89,15 +112,14 @@ import {APP_STATUSES,DOC_TYPES,MODES,PAY_METHODS,STATUS,label,list,statusClass} 
    @if(role==='TEACHER'){
    <div class="modern-dash-grid">
      <article class="card block">
-       <div class="section-row"><div><h3><span class="h-ic"><app-icon name="shield" [size]="18"/></span>Documents de vérification</h3><small>Diplômes et pièce d’identité pour obtenir le badge « Vérifié »</small></div></div>
+       <div class="section-row"><div><h3><span class="h-ic"><app-icon name="file" [size]="18"/></span>Tous mes documents</h3><small>Pièces complémentaires (facultatives) : identité, attestations…</small></div></div>
        @for(d of documents;track d.id){
-         <div class="row-item compact"><div class="row-main"><strong>{{L(DOC_TYPES,d.type)}}</strong><small><a class="text-link" [href]="d.fileUrl" target="_blank" rel="noopener">Voir le fichier</a>@if(d.rejectionReason){ · Motif : {{d.rejectionReason}}}</small></div><span class="status" [class]="sc(d.status)">{{L(STATUS,d.status)}}</span>@if(d.status!=='APPROVED'){<button class="btn small ghost" (click)="deleteDoc(d)" aria-label="Supprimer"><app-icon name="trash" [size]="16"/></button>}</div>
+         <div class="row-item compact"><div class="row-main"><strong>{{L(DOC_TYPES,d.type)}}</strong><small>@if(d.hasFile){<span>{{d.fileName}} · {{kb(d.sizeBytes)}}</span>}@else{<span>Ancien lien : à renvoyer en PDF</span>}@if(d.rejectionReason){<span> · Motif : {{d.rejectionReason}}</span>}</small></div><span class="status" [class]="sc(d.status)">{{L(STATUS,d.status)}}</span><div class="row-actions">@if(d.hasFile){<button class="btn small ghost" (click)="viewDoc(d)" aria-label="Voir le PDF"><app-icon name="eye" [size]="16"/></button>}@if(d.status!=='APPROVED'){<button class="btn small ghost" (click)="deleteDoc(d)" aria-label="Supprimer"><app-icon name="trash" [size]="16"/></button>}</div></div>
        } @empty {<p class="empty-inline">Aucun document envoyé.</p>}
-       <form class="inline-form" (ngSubmit)="addDoc()">
-         <select name="type" [(ngModel)]="doc.type" aria-label="Type de document">@for(k of docKeys;track k){<option [value]="k">{{DOC_TYPES[k]}}</option>}</select>
-         <input name="fileUrl" type="url" [(ngModel)]="doc.fileUrl" placeholder="Lien du fichier (Google Drive, Dropbox…)" aria-label="Lien du document" required>
-         <button class="btn small" [disabled]="!doc.fileUrl">Envoyer</button>
-       </form>
+       <div class="inline-form">
+         <select name="type" [(ngModel)]="doc.type" aria-label="Type de document">@for(k of optionalDocKeys;track k){<option [value]="k">{{DOC_TYPES[k]}}</option>}</select>
+         <label class="btn small file-btn">{{uploading[doc.type]?'Envoi…':'Choisir un PDF'}}<input type="file" accept="application/pdf,.pdf" (change)="uploadDoc(doc.type,$event)" hidden></label>
+       </div>
      </article>
      <article class="card block">
        <div class="section-row"><div><h3><span class="h-ic"><app-icon name="briefcase" [size]="18"/></span>Mes candidatures</h3><small>Suivi de vos candidatures aux offres des écoles</small></div><a class="btn small ghost" routerLink="/emplois">Voir les offres</a></div>
@@ -122,7 +144,7 @@ import {APP_STATUSES,DOC_TYPES,MODES,PAY_METHODS,STATUS,label,list,statusClass} 
                <div class="row-item compact">
                  <div class="row-main"><strong>{{a.teacherName}}</strong><small>{{a.createdAt | date:'d MMM y'}}</small>@if(a.coverLetter){<small class="note">« {{a.coverLetter}} »</small>}</div>
                  <select [ngModel]="a.status" (ngModelChange)="applicationStatus(a,$event)" aria-label="Statut de la candidature">@for(s of APP_STATUSES;track s){<option [value]="s">{{L(STATUS,s)}}</option>}</select>
-                 <div class="row-actions">@if(a.teacherProfileId){<a class="btn small ghost" [routerLink]="['/enseignants',a.teacherProfileId]">Profil</a>}<button class="btn small ghost" (click)="message(a.teacherId)" aria-label="Envoyer un message"><app-icon name="message" [size]="16"/></button></div>
+                 <div class="row-actions"><button class="btn small" (click)="viewCv(a.teacherId)"><app-icon name="file" [size]="16"/>CV</button>@if(a.teacherProfileId){<a class="btn small ghost" [routerLink]="['/enseignants',a.teacherProfileId]">Profil</a>}<button class="btn small ghost" (click)="message(a.teacherId)" aria-label="Envoyer un message"><app-icon name="message" [size]="16"/></button></div>
                </div>
              } @empty {<p class="empty-inline">Pas encore de candidature.</p>}
            </div>
@@ -136,12 +158,12 @@ import {APP_STATUSES,DOC_TYPES,MODES,PAY_METHODS,STATUS,label,list,statusClass} 
 export class DashboardComponent implements OnInit{
  auth=inject(AuthService);api=inject(ApiService);router=inject(Router);
  STATUS=STATUS;MODES=MODES;PAY_METHODS=PAY_METHODS;DOC_TYPES=DOC_TYPES;APP_STATUSES=APP_STATUSES;L=label;sc=statusClass;
- payKeys=Object.keys(PAY_METHODS);docKeys=Object.keys(DOC_TYPES);
+ payKeys=Object.keys(PAY_METHODS);optionalDocKeys=Object.keys(DOC_TYPES).filter(k=>!REQUIRED_DOCS.includes(k));REQUIRED_DOCS=REQUIRED_DOCS;
  role=this.auth.role();
  bookings:any[]=[];requests:any[]=[];favorites:any[]=[];documents:any[]=[];applications:any[]=[];jobs:any[]=[];applicants:any[]=[];
  profile:any=null;completion=0;unreadMessages=0;flash='';error='';
  payFor:string|null=null;payMethod='ORANGE_MONEY';reviewFor:string|null=null;review:any={rating:5,comment:''};
- doc:any={type:'DIPLOMA',fileUrl:''};openJob:string|null=null;
+ doc:any={type:'ID_CARD'};uploading:{[k:string]:boolean}={};docsLoaded=false;openJob:string|null=null;
 
  ngOnInit(){
   if(this.role==='ADMIN'){this.router.navigateByUrl('/admin');return}
@@ -163,7 +185,7 @@ export class DashboardComponent implements OnInit{
   }
   if(this.role==='TEACHER'){
    this.api.get<any>('/api/v1/teachers/me').subscribe({next:p=>{this.profile=p;this.computeCompletion()},error:()=>{}});
-   this.api.get<any[]>('/api/v1/documents/mine').subscribe({next:x=>{this.documents=x;this.computeCompletion()},error:()=>{}});
+   this.api.get<any[]>('/api/v1/documents/mine').subscribe({next:x=>{this.documents=x;this.docsLoaded=true;this.computeCompletion()},error:()=>{this.docsLoaded=true}});
    this.api.get<any[]>('/api/v1/jobs/applications/mine').subscribe({next:x=>this.applications=x,error:()=>{}});
   }
   if(this.role==='SCHOOL'){
@@ -174,7 +196,7 @@ export class DashboardComponent implements OnInit{
  computeCompletion(){
   const p=this.profile||{};
   const checks=this.role==='TEACHER'
-   ?[p.headline,p.bio,list(p.subjects).length,list(p.levels).length,list(p.teachingModes).length,p.hourlyRate,p.city,p.availabilityJson,p.avatarUrl,this.documents.length]
+   ?[p.headline,p.bio,list(p.subjects).length,list(p.levels).length,list(p.teachingModes).length,p.hourlyRate,p.city,p.availabilityJson,p.avatarUrl,this.docsComplete()]
    :[p.name,p.city,p.address,p.description,p.phone,p.logoUrl,p.website];
   this.completion=Math.round(checks.filter(Boolean).length/checks.length*100);
  }
@@ -206,7 +228,28 @@ export class DashboardComponent implements OnInit{
  }
  sendReview(b:any){this.api.post('/api/v1/reviews',{bookingId:b.id,...this.review}).subscribe({next:()=>{this.reviewFor=null;this.ok('Merci pour votre avis !');this.load()},error:e=>this.ko(e)})}
  message(userId:string){this.api.post<any>('/api/v1/messaging/conversations',{userId}).subscribe({next:c=>this.router.navigate(['/messages',c.id]),error:e=>this.ko(e)})}
- addDoc(){this.api.post('/api/v1/documents',this.doc).subscribe({next:()=>{this.doc={type:'DIPLOMA',fileUrl:''};this.ok('Document envoyé pour vérification.');this.load()},error:e=>this.ko(e)})}
+ docFor(t:string){return this.documents.find(d=>d.type===t)}
+ docOk(t:string){const d=this.docFor(t);return !!d&&d.hasFile&&d.status!=='REJECTED'}
+ docsComplete(){return REQUIRED_DOCS.every(t=>this.docOk(t))}
+ kb(n:number){return n>=1048576?(n/1048576).toFixed(1)+' Mo':Math.max(1,Math.round((n||0)/1024))+' Ko'}
+ viewDoc(d:any){if(d)this.api.openPdf(`/api/v1/documents/${d.id}/file`)}
+ /** Client-side checks first (type, 5 MB), then multipart upload. */
+ uploadDoc(type:string,ev:Event){
+  const input=ev.target as HTMLInputElement;const file=input.files?.[0];input.value='';
+  if(!file)return;
+  if(!(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf'))){this.error='Seuls les fichiers PDF sont acceptés.';return}
+  if(file.size>5*1024*1024){this.error='Le fichier dépasse 5 Mo. Compressez-le puis réessayez.';return}
+  const form=new FormData();form.append('type',type);form.append('file',file,file.name);
+  this.uploading={...this.uploading,[type]:true};this.error='';
+  this.api.upload<any>('/api/v1/documents',form).subscribe({
+   next:d=>{this.uploading={...this.uploading,[type]:false};this.documents=[d,...this.documents.filter(x=>x.id!==d.id)];this.computeCompletion();this.ok(DOC_TYPES[type]+' envoyé. Il sera vérifié par l’équipe Profa.')},
+   error:e=>{this.uploading={...this.uploading,[type]:false};this.ko(e)}});
+ }
+ viewCv(teacherId:string){
+  this.api.get<any[]>(`/api/v1/documents/teacher/${teacherId}`).subscribe({
+   next:list=>{const cv=list.find(d=>d.type==='CV'&&d.hasFile);if(cv)this.api.openPdf(`/api/v1/documents/${cv.id}/file`);else this.error='Ce candidat n’a pas encore de CV en PDF.'},
+   error:e=>this.ko(e)});
+ }
  deleteDoc(d:any){if(!confirm('Supprimer ce document ?'))return;this.api.delete(`/api/v1/documents/${d.id}`).subscribe({next:()=>this.load(),error:e=>this.ko(e)})}
  jobStatus(j:any){this.api.patch(`/api/v1/jobs/${j.id}/status`,{},{value:j.status==='OPEN'?'CLOSED':'OPEN'}).subscribe({next:()=>this.load(),error:e=>this.ko(e)})}
  toggleApplicants(j:any){

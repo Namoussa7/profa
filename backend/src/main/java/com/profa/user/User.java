@@ -1,4 +1,37 @@
 package com.profa.user;
-import jakarta.persistence.*;import java.time.*;import java.util.*;
-@Entity @Table(name="users") public class User { @Id @GeneratedValue(strategy=GenerationType.UUID) private UUID id; @Column(nullable=false,unique=true) private String email; @Column(nullable=false) private String passwordHash; @Column(nullable=false) private String firstName; @Column(nullable=false) private String lastName; private String phone; @Enumerated(EnumType.STRING) @Column(nullable=false) private Role role; private boolean enabled=true; private boolean verified=false; private Instant createdAt=Instant.now();
- public UUID getId(){return id;} public String getEmail(){return email;} public void setEmail(String v){email=v;} @com.fasterxml.jackson.annotation.JsonIgnore public String getPasswordHash(){return passwordHash;} public void setPasswordHash(String v){passwordHash=v;} public String getFirstName(){return firstName;} public void setFirstName(String v){firstName=v;} public String getLastName(){return lastName;} public void setLastName(String v){lastName=v;} public String getPhone(){return phone;} public void setPhone(String v){phone=v;} public Role getRole(){return role;} public void setRole(Role v){role=v;} public boolean isEnabled(){return enabled;} public void setEnabled(boolean v){enabled=v;} public boolean isVerified(){return verified;} public void setVerified(boolean v){verified=v;} public Instant getCreatedAt(){return createdAt;} }
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+import java.time.*;
+import java.util.*;
+
+@Entity
+@Table(name = "users")
+public class User {
+    @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
+    @Column(nullable = false, unique = true) private String email;
+    @Column(nullable = false) private String passwordHash;
+    @Column(nullable = false) private String firstName;
+    @Column(nullable = false) private String lastName;
+    private String phone;
+    @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
+    private boolean enabled = true;
+    private boolean verified = false;
+    private Instant createdAt = Instant.now();
+    /** Tokens issued before this instant are rejected (password change / reset). */
+    private Instant passwordChangedAt;
+    private Instant lastLoginAt;
+
+    public UUID getId(){return id;}
+    public String getEmail(){return email;} public void setEmail(String v){email=v;}
+    @JsonIgnore public String getPasswordHash(){return passwordHash;} public void setPasswordHash(String v){passwordHash=v;}
+    public String getFirstName(){return firstName;} public void setFirstName(String v){firstName=v;}
+    public String getLastName(){return lastName;} public void setLastName(String v){lastName=v;}
+    public String getPhone(){return phone;} public void setPhone(String v){phone=v;}
+    public Role getRole(){return role;} public void setRole(Role v){role=v;}
+    public boolean isEnabled(){return enabled;} public void setEnabled(boolean v){enabled=v;}
+    public boolean isVerified(){return verified;} public void setVerified(boolean v){verified=v;}
+    public Instant getCreatedAt(){return createdAt;}
+    @JsonIgnore public Instant getPasswordChangedAt(){return passwordChangedAt;} public void setPasswordChangedAt(Instant v){passwordChangedAt=v;}
+    public Instant getLastLoginAt(){return lastLoginAt;} public void setLastLoginAt(Instant v){lastLoginAt=v;}
+}

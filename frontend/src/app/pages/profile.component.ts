@@ -5,7 +5,7 @@ import {FormsModule} from '@angular/forms';
 import {ActivatedRoute,RouterLink} from '@angular/router';
 import {ApiService,errorMessage} from '../core/api.service';
 import {AuthService} from '../core/auth/auth.service';
-import {CITIES,LEVELS,MODES,SUBJECTS,initials,list} from '../core/labels';
+import {CITIES,LEVELS,MODES,SUBJECTS,initials,list,passwordIssues} from '../core/labels';
 
 @Component({
  standalone:true,
@@ -96,6 +96,31 @@ import {CITIES,LEVELS,MODES,SUBJECTS,initials,list} from '../core/labels';
          </form>
        </div>
        }
+
+       <div class="profile-form-card">
+         <div class="card-title"><div><h2>Sécurité</h2><p>Changer le mot de passe déconnecte vos autres appareils.</p></div><span><app-icon name="lock"/></span></div>
+         <form (ngSubmit)="changePassword()" #pf="ngForm">
+           <div class="form-grid">
+             <label class="full">Mot de passe actuel<input type="password" name="current" autocomplete="current-password" [(ngModel)]="pwd.current" required></label>
+             <label>Nouveau mot de passe<input type="password" name="next" autocomplete="new-password" [(ngModel)]="pwd.next" required></label>
+             <label>Confirmer<input type="password" name="confirm" autocomplete="new-password" [(ngModel)]="pwd.confirm" required></label>
+           </div>
+           @if(pwd.next){<ul class="pwd-rules">@for(r of pwdRules();track r.label){<li [class.ok]="r.ok"><app-icon [name]="r.ok?'check':'x'" [size]="14"/>{{r.label}}</li>}</ul>}
+           <div class="save-row"><span class="success" *ngIf="message.pwd">{{message.pwd}}</span><button class="btn" [disabled]="saving||!pwdValid()">Changer le mot de passe</button></div>
+         </form>
+       </div>
+
+       <div class="profile-form-card danger-zone">
+         <div class="card-title"><div><h2>Supprimer mon compte</h2><p>Suppression définitive de votre profil, de vos messages et de vos documents.</p></div><span><app-icon name="trash"/></span></div>
+         @if(!deleting){<button type="button" class="btn danger" (click)="deleting=true">Supprimer mon compte…</button>}
+         @else{
+           <form class="inline-form" (ngSubmit)="deleteAccount()">
+             <label>Confirmez avec votre mot de passe<input type="password" name="delpwd" [(ngModel)]="deletePwd" autocomplete="current-password" required></label>
+             <button class="btn danger" [disabled]="!deletePwd||saving">Supprimer définitivement</button>
+             <button type="button" class="text-link" (click)="deleting=false;deletePwd=''">Annuler</button>
+           </form>
+         }
+       </div>
      </div>
    </div>
    }
@@ -123,5 +148,19 @@ export class ProfileComponent implements OnInit{
  private fail(e:any){this.saving=false;this.error=errorMessage(e,'La mise à jour a échoué. Réessayez.')}
  save(){this.saving=true;this.api.patch<any>('/api/v1/profile',this.form).subscribe({next:p=>{this.profile=p;this.auth.updateNames(p.firstName,p.lastName);this.flash('user','Profil mis à jour.')},error:e=>this.fail(e)})}
  saveTeacher(){this.saving=true;this.api.put<any>('/api/v1/teachers/me',this.teacher).subscribe({next:t=>{this.teacher=t;this.flash('teacher','Profil enseignant enregistré.')},error:e=>this.fail(e)})}
+ pwd:any={current:'',next:'',confirm:''};deleting=false;deletePwd='';
+ pwdRules(){return passwordIssues(this.pwd.next)}
+ pwdValid(){return !!this.pwd.current&&this.pwdRules().every(r=>r.ok)&&this.pwd.next===this.pwd.confirm}
+ changePassword(){
+  this.saving=true;
+  this.api.patch<any>('/api/v1/profile/password',{currentPassword:this.pwd.current,newPassword:this.pwd.next}).subscribe({
+   next:r=>{localStorage.setItem('profa_token',r.token);this.pwd={current:'',next:'',confirm:''};this.flash('pwd','Mot de passe modifié. Vos autres sessions ont été fermées.')},
+   error:e=>this.fail(e)});
+ }
+ deleteAccount(){
+  if(!confirm('Supprimer définitivement votre compte Profa ? Cette action est irréversible.'))return;
+  this.saving=true;
+  this.api.delete('/api/v1/profile',{password:this.deletePwd}).subscribe({next:()=>{this.auth.logout('/')},error:e=>this.fail(e)});
+ }
  saveSchool(){this.saving=true;this.api.put<any>('/api/v1/schools/me',this.school).subscribe({next:s=>{this.school=s;this.flash('school','Fiche établissement enregistrée.')},error:e=>this.fail(e)})}
 }

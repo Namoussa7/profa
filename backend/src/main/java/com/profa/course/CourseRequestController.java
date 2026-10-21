@@ -40,7 +40,7 @@ public class CourseRequestController {
         if (CurrentUser.isAdmin(a)) return enrich(r.findAll());
         if (CurrentUser.hasRole(a, "TEACHER")) {
             List<CourseRequest> out = new ArrayList<>(r.findByTeacherIdOrderByCreatedAtDesc(me));
-            out.addAll(r.findByTeacherIdIsNullAndStatusOrderByCreatedAtDesc("PENDING"));
+            out.addAll(r.findTop50ByTeacherIdIsNullAndStatusOrderByCreatedAtDesc("PENDING"));
             return enrich(out);
         }
         return enrich(r.findByParentIdOrderByCreatedAtDesc(me));
@@ -52,7 +52,7 @@ public class CourseRequestController {
         UUID me = CurrentUser.id(a);
         if (in.getSubject() == null || in.getSubject().isBlank()) throw CurrentUser.badRequest("Matière requise");
         if (in.getBudget() != null && in.getBudget() < 0) throw CurrentUser.badRequest("Budget invalide");
-        if (in.getTeacherId() != null && teachers.findByUserId(in.getTeacherId()).isEmpty())
+        if (in.getTeacherId() != null && !teachers.findByUserId(in.getTeacherId()).map(t -> t.isDocumentsComplete()).orElse(false))
             throw CurrentUser.notFound("Enseignant");
         CourseRequest x = new CourseRequest();
         x.setParentId(me);
@@ -83,6 +83,8 @@ public class CourseRequestController {
                 || (isTarget && Set.of("ACCEPTED", "DECLINED").contains(next))
                 || (isParent && "CANCELLED".equals(next));
         if (!allowed) throw CurrentUser.forbidden();
+        if (isTarget && "ACCEPTED".equals(next) && !teachers.findByUserId(me).map(t -> t.isDocumentsComplete()).orElse(false))
+            throw CurrentUser.badRequest("Envoyez d'abord votre CV et votre diplôme en PDF depuis votre espace");
         if (!"PENDING".equals(x.getStatus()) && !CurrentUser.isAdmin(a))
             throw CurrentUser.badRequest("Cette demande a déjà été traitée");
         // An open request accepted by a teacher becomes theirs.

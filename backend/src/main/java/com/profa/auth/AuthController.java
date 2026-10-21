@@ -29,10 +29,16 @@ public class AuthController {
     private final JwtService jwt;
     private final TeacherRepository teachers;
     private final SchoolRepository schools;
+    private final PasswordResetService resets;
 
-    public AuthController(UserRepository u, PasswordEncoder e, JwtService j, TeacherRepository t, SchoolRepository s) {
-        users = u; encoder = e; jwt = j; teachers = t; schools = s;
+    public AuthController(UserRepository u, PasswordEncoder e, JwtService j, TeacherRepository t, SchoolRepository s,
+                          PasswordResetService r) {
+        users = u; encoder = e; jwt = j; teachers = t; schools = s; resets = r;
     }
+
+    public record ForgotPassword(@Email @NotBlank String email) {}
+
+    public record ResetPassword(@NotBlank String token, @NotBlank String password) {}
 
     public record Register(@Email @NotBlank String email,
                            @NotBlank @Size(min = 8, max = 128) String password,
@@ -55,6 +61,7 @@ public class AuthController {
         if (r.role() == Role.ADMIN) {
             return ResponseEntity.status(403).body(Map.of("message", "La création de comptes administrateur est restreinte"));
         }
+        PasswordResetService.validatePassword(r.password());
         String email = r.email().trim().toLowerCase();
         if (users.findByEmailIgnoreCase(email).isPresent()) {
             return ResponseEntity.status(409).body(Map.of("message", "Cette adresse e-mail est déjà utilisée"));
@@ -91,6 +98,21 @@ public class AuthController {
         if (!u.isEnabled()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Ce compte a été désactivé. Contactez le support Profa.");
         }
+        u.setLastLoginAt(java.time.Instant.now());
+        users.save(u);
         return response(u);
+    }
+
+    /** Always answers the same way, whether or not the e-mail exists. */
+    @PostMapping("/forgot-password")
+    public Map<String, String> forgot(@Valid @RequestBody ForgotPassword r) {
+        resets.requestByEmail(r.email());
+        return Map.of("message", "Si un compte existe avec cette adresse, un lien de réinitialisation vient d'être envoyé.");
+    }
+
+    @PostMapping("/reset-password")
+    public Map<String, String> reset(@Valid @RequestBody ResetPassword r) {
+        resets.reset(r.token(), r.password());
+        return Map.of("message", "Mot de passe modifié. Vous pouvez vous connecter.");
     }
 }

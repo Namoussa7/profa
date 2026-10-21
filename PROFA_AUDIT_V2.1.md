@@ -68,3 +68,29 @@ Interface retenue : **un modèle hybride Preply + Superprof** (recherche matièr
 - Pages, tableau de bord, profil, messagerie, emplois et admin harmonisés ; navigation mobile en bas d'écran.
 - Logo Profa (`core/logo.component.ts`, `src/favicon.svg`) : toque de diplômé au-dessus d'un « P » dont la boucle est une bulle de dialogue, pompon ambré. Utilisé dans l'en-tête, le pied de page, la connexion/inscription, l'onglet du navigateur et l'icône de l'application (PWA).
 - Profil école : le logo de l'établissement s'affiche dans la carte de profil (aperçu immédiat).
+
+## 6. Version 2.2 — administration, documents obligatoires, montée en charge
+
+### Administration
+- Comptes : recherche paginée (nom, e-mail, téléphone), filtres rôle/statut, création de compte (y compris administrateur), modification, changement de rôle, vérification, blocage, **suppression définitive** (avec confirmation « SUPPRIMER »), lien de réinitialisation à transmettre par WhatsApp/SMS.
+- Protections : impossible de se bloquer/supprimer soi-même ou de retirer le dernier administrateur.
+- Enseignants (filtre « dossier incomplet »), documents (ouverture du PDF, approbation, refus avec motif), offres (fermer/supprimer), réservations, paiements, **modération des avis**, **journal d'audit** de toutes les actions.
+
+### Mot de passe
+- « Mot de passe oublié » : lien à usage unique valable 60 min (seule l'empreinte SHA-256 est stockée), réponse identique que l'e-mail existe ou non.
+- Changement de mot de passe depuis le profil, suppression de son propre compte.
+- Toute modification du mot de passe, blocage, suppression ou changement de rôle **ferme immédiatement les sessions** existantes.
+- Mots de passe : 8 caractères minimum, au moins une lettre et un chiffre. Limitation à 10 tentatives/minute/IP sur l'authentification.
+- E-mails via SMTP (variables `MAIL_*`, ex. Brevo) ; sans SMTP, l'admin génère le lien.
+
+### Documents obligatoires
+- Chaque enseignant doit envoyer son **CV** et son **diplôme** en **PDF** (contrôle du contenu réel, 5 Mo max). Sans eux : profil invisible dans la recherche, impossible d'accepter une demande, d'être réservé ou de postuler.
+- Quand les deux sont approuvés, le badge « Vérifié » est attribué automatiquement.
+- Les écoles peuvent ouvrir le CV des candidats à leurs offres.
+- Les anciens documents « par lien » ne comptent plus : les enseignants existants doivent renvoyer leurs PDF.
+
+### Montée en charge et réactivité
+- Recherche enseignants exécutée en SQL avec pagination (12 par page, « Afficher plus »), note dénormalisée, index dédiés (migration V3).
+- Statistiques admin par requêtes `COUNT`, listes admin paginées, compression gzip, cache HTTP 30 s sur la recherche publique, pool de connexions configuré, envoi d'e-mails asynchrone.
+- Frontend : pages chargées à la demande puis préchargées, build de production avec empreintes de fichiers (cache navigateur), recherche pendant la frappe, polices préchargées, bandeau « démarrage du serveur » pendant le réveil de l'instance gratuite.
+- Limite principale restante : l'instance **gratuite** de Render (mise en veille, 512 Mo). Pour un très grand nombre d'utilisateurs : instance payante (≥ Standard) + plusieurs instances, PostgreSQL payant, et déplacement des PDF vers un stockage objet (S3/R2) si le volume devient important.

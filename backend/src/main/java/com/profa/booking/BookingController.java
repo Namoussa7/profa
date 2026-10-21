@@ -71,6 +71,7 @@ public class BookingController {
         }
         if (teacherId == null) throw CurrentUser.badRequest("Enseignant requis");
         TeacherProfile teacher = teachers.findByUserId(teacherId).orElseThrow(() -> CurrentUser.notFound("Enseignant"));
+        if (!teacher.isDocumentsComplete()) throw CurrentUser.badRequest("Cet enseignant n'a pas encore finalisé son dossier (CV et diplôme)");
         if (in.startsAt() == null || in.endsAt() == null || !in.endsAt().isAfter(in.startsAt()))
             throw CurrentUser.badRequest("Créneau invalide : la fin doit être après le début");
         if (in.startsAt().isBefore(LocalDateTime.now())) throw CurrentUser.badRequest("Le créneau doit être dans le futur");

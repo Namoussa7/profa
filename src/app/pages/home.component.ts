@@ -90,7 +90,7 @@ export class HomeComponent implements OnInit{
   {name:'Préparation BAC',icon:'cap',hint:'Révisions intensives'},
  ];
  subject='';city='';featured:any[]=[];
- ngOnInit(){this.api.get<any[]>('/api/v1/teachers',{sort:'relevance'}).subscribe({next:x=>this.featured=x.slice(0,3),error:()=>{}})}
+ ngOnInit(){this.api.get<any>('/api/v1/teachers',{sort:'relevance',size:3}).subscribe({next:x=>this.featured=(x?.content||[]).slice(0,3),error:()=>{}})}
  search(){this.router.navigate(['/enseignants'],{queryParams:{subject:this.subject||null,city:this.city||null}})}
  ini(t:any){return initials(t.firstName,t.lastName)}
  subj(t:any){return list(t.subjects)}

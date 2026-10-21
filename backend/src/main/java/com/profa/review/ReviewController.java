@@ -22,9 +22,10 @@ public class ReviewController {
     final BookingRepository bookings;
     final NotificationService notifications;
     final UserNames names;
+    final RatingService ratings;
 
-    public ReviewController(ReviewRepository r, BookingRepository b, NotificationService n, UserNames names) {
-        this.r = r; bookings = b; notifications = n; this.names = names;
+    public ReviewController(ReviewRepository r, BookingRepository b, NotificationService n, UserNames names, RatingService ratings) {
+        this.r = r; bookings = b; notifications = n; this.names = names; this.ratings = ratings;
     }
 
     public record ReviewView(UUID id, String authorName, int rating, String comment, Instant createdAt) {}
@@ -58,6 +59,7 @@ public class ReviewController {
         x.setRating(in.rating());
         x.setComment(in.comment() == null ? null : in.comment().trim());
         Review saved = r.save(x);
+        ratings.refresh(b.getTeacherId());
         notifications.notify(b.getTeacherId(), "REVIEW", "Nouvel avis " + "★".repeat(in.rating()),
                 names.of(me) + " a laissé un avis sur votre cours.", "/dashboard");
         return saved;

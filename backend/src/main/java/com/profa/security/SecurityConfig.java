@@ -1,6 +1,7 @@
 package com.profa.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(x -> x
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/api/v1/public/**", "/actuator/health", "/actuator/health/**").permitAll()
+                        // Spring forwards errors to /error: without this, a 400/404/405 would be turned into a 401.
+                        .requestMatchers("/error").permitAll()
                         // Public marketplace browsing (like Superprof / Preply): teachers, reviews and job offers.
                         .requestMatchers(HttpMethod.GET, "/api/v1/teachers", "/api/v1/teachers/*", "/api/v1/reviews/teacher/*",
                                 "/api/v1/jobs", "/api/v1/jobs/*").permitAll()
@@ -47,8 +50,17 @@ public class SecurityConfig {
                         // WebSocket handshake; STOMP CONNECT is authenticated in WebSocketConfig.
                         .requestMatchers("/ws", "/ws/**").permitAll()
                         .anyRequest().authenticated())
+                .addFilterBefore(new RateLimitFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(f, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    /** JwtFilter is a @Component: keep it only inside the security chain (not a second time as a servlet filter). */
+    @Bean
+    FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtFilter f) {
+        FilterRegistrationBean<JwtFilter> r = new FilterRegistrationBean<>(f);
+        r.setEnabled(false);
+        return r;
     }
 
     @Bean

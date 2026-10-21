@@ -12,8 +12,21 @@ export class ApiService{
  post<T>(url:string,body:any={}){return this.http.post<T>(`${API_BASE_URL}${url}`,body)}
  put<T>(url:string,body:any){return this.http.put<T>(`${API_BASE_URL}${url}`,body)}
  patch<T>(url:string,body:any={},params:any={}){return this.http.patch<T>(`${API_BASE_URL}${url}`,body,{params:clean(params)})}
- delete<T>(url:string){return this.http.delete<T>(`${API_BASE_URL}${url}`)}
+ delete<T>(url:string,body?:any){return this.http.delete<T>(`${API_BASE_URL}${url}`,body?{body}:{})}
+ /** multipart/form-data upload (the browser sets the boundary). */
+ upload<T>(url:string,form:FormData){return this.http.post<T>(`${API_BASE_URL}${url}`,form)}
+ /** Opens an authenticated PDF in a new tab (the JWT cannot be put in a plain link). */
+ openPdf(url:string){
+  const tab=window.open('','_blank');
+  this.http.get(`${API_BASE_URL}${url}`,{responseType:'blob'}).subscribe({
+   next:b=>{const u=URL.createObjectURL(b);if(tab){tab.location.href=u}else{window.location.href=u}setTimeout(()=>URL.revokeObjectURL(u),60000)},
+   error:()=>{tab?.close();alert('Impossible d’ouvrir ce document.')}
+  });
+ }
 }
+
+/** Shape of paginated API responses. */
+export interface Page<T>{content:T[];page:number;size:number;totalElements:number;totalPages:number}
 
 /** Extracts the backend {message} from an HTTP error. */
 export function errorMessage(e:any,fallback='Une erreur est survenue. Réessayez.'):string{

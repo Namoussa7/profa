@@ -26,6 +26,12 @@ services:
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-}
       APP_BOOTSTRAP_ADMIN_EMAIL: ${APP_BOOTSTRAP_ADMIN_EMAIL:-}
       APP_BOOTSTRAP_ADMIN_PASSWORD: ${APP_BOOTSTRAP_ADMIN_PASSWORD:-}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@profa.ml}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost}
     depends_on:
       postgres:
         condition: service_healthy
