@@ -34,3 +34,5 @@ export function passwordIssues(p:string){
  ];
 }
 export const REQUIRED_DOCS=['CV','DIPLOMA'];
+
+export const REPORT_REASONS:{[k:string]:string}={ABSENCE:'Absences / retards',BEHAVIOR:'Comportement inapproprié',SAFETY:'Sécurité d’un enfant (urgent)',LEVEL:'Niveau insuffisant',FRAUD:'Fraude / faux profil',OTHER:'Autre'};

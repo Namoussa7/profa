@@ -18,7 +18,8 @@ import {RouterLink} from '@angular/router';
      </ol><a class="btn" routerLink="/enseignants">Trouver un enseignant <app-icon name="arrow" [size]="16"/></a></article>
      <article class="card"><h2><span class="h-ic"><app-icon name="cap" [size]="18"/></span>Enseignants</h2><ol class="steps">
        <li><b>Créez votre profil</b> : matières, niveaux, tarif, disponibilités, vidéo.</li>
-       <li><b>Envoyez vos documents</b> (diplôme, pièce d’identité) pour obtenir le badge « Vérifié ».</li>
+       <li><b>Envoyez vos documents</b> (CV et diplôme en PDF ; casier judiciaire pour les cours à domicile) pour obtenir le badge « Vérifié ».</li>
+       <li><b>Passez le test de certification</b> de votre matière et faites valider votre vidéo pour devenir « Certifié Profa ».</li>
        <li><b>Recevez des demandes</b> et réservations ; acceptez, confirmez, marquez les cours terminés.</li>
        <li><b>Postulez</b> aux offres des écoles et suivez vos candidatures.</li>
      </ol><a class="btn" routerLink="/inscription" [queryParams]="{role:'TEACHER'}">Devenir enseignant <app-icon name="arrow" [size]="16"/></a></article>

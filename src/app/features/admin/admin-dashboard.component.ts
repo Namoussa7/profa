@@ -5,9 +5,9 @@ import {RouterLink} from '@angular/router';
 import {ApiService,Page,errorMessage} from '../../core/api.service';
 import {AuthService} from '../../core/auth/auth.service';
 import {IconComponent} from '../../core/icon.component';
-import {DOC_TYPES,ROLES,STATUS,label,statusClass} from '../../core/labels';
+import {DOC_TYPES,LEVELS,REPORT_REASONS,ROLES,STATUS,SUBJECTS,label,statusClass} from '../../core/labels';
 
-type Tab='overview'|'billing'|'users'|'teachers'|'documents'|'schools'|'jobs'|'bookings'|'payments'|'reviews'|'audit';
+type Tab='overview'|'billing'|'certification'|'users'|'teachers'|'documents'|'schools'|'jobs'|'bookings'|'payments'|'reviews'|'audit';
 interface TabState{items:any[];page:number;totalPages:number;total:number;loading:boolean}
 
 const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/v1/admin/teachers',documents:'/api/v1/admin/documents',
@@ -120,8 +120,82 @@ const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/
    </article>
    }
 
+   <!-- ============ CERTIFICATION ============ -->
+   @if(tab==='certification'&&cert.settings){
+   <div class="billing-kpis">
+     <div class="card"><small>Tests passés</small><strong>{{cert.overview?.attempts||0}}</strong><span>{{cert.overview?.passed||0}} réussis ({{passRate()}} %)</span></div>
+     <div class="card"><small>Certifiés Profa</small><strong>{{cert.overview?.certified||0}}</strong><span>enseignants</span></div>
+     <div class="card"><small>Vidéos à valider</small><strong>{{cert.overview?.pendingVideos||0}}</strong><span>en attente</span></div>
+     <div class="card"><small>Signalements ouverts</small><strong>{{cert.overview?.openReports||0}}</strong><span>{{cert.overview?.suspended||0}} enseignant(s) suspendu(s)</span></div>
+   </div>
+
+   <div class="admin-grid">
+     <article class="card">
+       <div class="section-row"><h3><span class="h-ic"><app-icon name="message" [size]="18"/></span>Signalements</h3><small>{{cert.reports.length}} ouvert(s)</small></div>
+       @for(r of cert.reports;track r.id){
+         <div class="row-item compact report-row" [class.urgent]="r.reason==='SAFETY'"><div class="row-main"><strong>{{r.teacherName}} — {{L(REPORT_REASONS,r.reason)}}</strong><small>par {{r.reporterName}} · {{r.createdAt|date:'d MMM, HH:mm'}}</small>@if(r.details){<small class="note">« {{r.details}} »</small>}</div>
+           <div class="row-actions">@if(r.teacherProfileId){<a class="btn small ghost" [routerLink]="['/enseignants',r.teacherProfileId]"><app-icon name="eye" [size]="16"/></a>}<button class="btn small ghost" (click)="resolveReport(r,false)">Classer</button><button class="btn small danger" (click)="resolveReport(r,true)">Suspendre</button></div></div>
+       } @empty {<p class="empty-inline">Aucun signalement ouvert.</p>}
+       @if(cert.suspended.length){<h3 class="sub-title">Enseignants suspendus</h3>}
+       @for(t of cert.suspended;track t.id){
+         <div class="row-item compact"><div class="row-main"><strong>{{t.name}}</strong><small>{{t.suspendedReason}}</small></div><button class="btn small" (click)="unsuspend(t)">Réactiver</button></div>
+       }
+     </article>
+     <article class="card">
+       <div class="section-row"><h3><span class="h-ic"><app-icon name="video" [size]="18"/></span>Vidéos de présentation</h3><small>{{cert.videos.length}} à valider</small></div>
+       @for(v of cert.videos;track v.id){
+         <div class="row-item compact"><div class="row-main"><strong>{{v.name}}</strong><small><a class="text-link" [href]="v.videoUrl" target="_blank" rel="noopener">Ouvrir la vidéo</a> · {{v.headline||'—'}}</small></div>
+           <div class="row-actions"><button class="btn small" (click)="reviewVideo(v,'APPROVED')">Valider</button><button class="btn small danger" (click)="reviewVideo(v,'REJECTED')">Refuser</button></div></div>
+       } @empty {<p class="empty-inline">Aucune vidéo en attente.</p>}
+     </article>
+   </div>
+
+   <article class="card block">
+     <div class="section-row"><div><h3><span class="h-ic"><app-icon name="book" [size]="18"/></span>Banque de questions</h3>
+       <small>Un test devient disponible dès qu’une matière/niveau compte au moins {{cert.settings.quizQuestionCount}} questions.</small></div></div>
+     <div class="bank-chips">@for(b of cert.overview?.bank||[];track b.subject+b.level){<button type="button" class="chip" [class.on]="qf.subject===b.subject&&qf.level===b.level" (click)="qf={subject:b.subject,level:b.level};resetQuestion();loadQuestions(0)">{{b.subject}} · {{b.level}} <b>{{b.questions}}</b>@if(b.ready){ ✓}</button>}@empty{<span class="muted small">Banque vide : ajoutez ou importez des questions.</span>}</div>
+
+     <details class="import-box" [open]="!(cert.overview?.bank?.length)"><summary><app-icon name="file" [size]="16"/> Importer depuis Excel (CSV)</summary>
+       <p class="muted small">Dans Excel : une ligne par question, colonnes <b>matière ; niveau ; question ; réponse 1 ; réponse 2 ; … ; numéro de la bonne réponse</b> (2 à 6 réponses), puis « Enregistrer sous → CSV (séparateur point-virgule) ».</p>
+       <div class="inline-form"><input type="file" accept=".csv,text/csv,text/plain" (change)="readCsv($event)"><button type="button" class="text-link" (click)="downloadTemplate()">Télécharger un modèle</button></div>
+       <textarea rows="5" [(ngModel)]="csvText" name="csv" placeholder="Mathématiques;Lycée (BAC);Combien vaut 7 × 8 ?;54;56;64;48;2"></textarea>
+       <button class="btn small" [disabled]="busy||!csvText.trim()" (click)="importCsv()">Importer</button>
+       @if(importResult){<p class="success">{{importResult.imported}} question(s) importée(s).</p>@for(e of importResult.errors;track e){<p class="error small">{{e}}</p>}}
+     </details>
+
+     <form class="question-form" (ngSubmit)="saveQuestion()">
+       <div class="two"><label>Matière<input name="qs" list="adm-subjects" [(ngModel)]="qform.subject" required></label><label>Niveau<select name="ql" [(ngModel)]="qform.level">@for(l of LEVELS;track l){<option [value]="l">{{l}}</option>}</select></label></div>
+       <datalist id="adm-subjects">@for(s of SUBJECTS;track s){<option [value]="s"></option>}</datalist>
+       <label>Question<textarea name="qt" rows="2" [(ngModel)]="qform.text" required></textarea></label>
+       @for(c of qform.choices;track $index;let i=$index){
+         <label class="choice-row"><input type="radio" name="qc" [value]="i" [(ngModel)]="qform.correctIndex" title="Bonne réponse"><input [name]="'qc'+i" [(ngModel)]="qform.choices[i]" placeholder="Réponse {{i+1}}"></label>
+       }
+       <div class="row-actions"><button type="button" class="text-link" (click)="qform.choices.push('')" [disabled]="qform.choices.length>=6">+ Ajouter une réponse</button><button class="btn small" [disabled]="busy">{{qform.id?'Enregistrer':'Ajouter la question'}}</button>@if(qform.id){<button type="button" class="text-link" (click)="resetQuestion()">Annuler</button>}</div>
+       <p class="muted small">Cochez le rond à gauche de la bonne réponse.</p>
+     </form>
+
+     @if(qf.subject){<h3 class="sub-title">{{qf.subject}} · {{qf.level}} — {{cert.questions.totalElements||0}} question(s)</h3>}
+     @for(q of cert.questions.content||[];track q.id){
+       <div class="row-item compact"><div class="row-main"><strong>{{q.text}}</strong><small>@for(c of q.choiceList;track $index;let j=$index){<span [class.ok-text]="j===q.correctIndex">{{j+1}}. {{c}}{{j===q.correctIndex?' ✓':''}} </span>}</small></div>
+         <div class="row-actions"><button class="btn small ghost" (click)="editQuestion(q)"><app-icon name="edit" [size]="16"/></button><button class="btn small danger" (click)="deleteQuestion(q)"><app-icon name="trash" [size]="16"/></button></div></div>
+     }
+     @if((cert.questions.totalPages||0)>1){<div class="pager"><button class="btn small ghost" [disabled]="cert.questions.page===0" (click)="loadQuestions(cert.questions.page-1)">Précédent</button><span>Page {{cert.questions.page+1}} / {{cert.questions.totalPages}}</span><button class="btn small ghost" [disabled]="cert.questions.page+1>=cert.questions.totalPages" (click)="loadQuestions(cert.questions.page+1)">Suivant</button></div>}
+   </article>
+
+   <article class="card block">
+     <div class="section-row"><h3><span class="h-ic"><app-icon name="chart" [size]="18"/></span>Règles de certification</h3></div>
+     <form class="stack" (ngSubmit)="saveCertSettings()">
+       <label class="check switch"><input type="checkbox" name="rc" [(ngModel)]="cert.form.requireCertification"> <span><b>Test obligatoire pour apparaître dans la recherche</b><br><small class="muted">À activer quand la banque couvre les matières principales.</small></span></label>
+       <label class="check switch"><input type="checkbox" name="rr" [(ngModel)]="cert.form.requireRecordForHome"> <span><b>Casier judiciaire obligatoire pour les cours à domicile</b><br><small class="muted">Recommandé : protège les enfants et rassure les parents.</small></span></label>
+       <div class="four"><label>Questions par test<input type="number" min="5" max="100" name="qn" [(ngModel)]="cert.form.quizQuestionCount"></label><label>Durée (min)<input type="number" min="5" max="180" name="qd" [(ngModel)]="cert.form.quizDurationMinutes"></label><label>Réussite (%)<input type="number" min="1" max="100" name="qp" [(ngModel)]="cert.form.quizPassScore"></label><label>Tentatives<input type="number" min="1" name="qa" [(ngModel)]="cert.form.quizMaxAttempts"></label></div>
+       <div class="four"><label>Délai après échecs (jours)<input type="number" min="0" name="qc2" [(ngModel)]="cert.form.quizCooldownDays"></label><label>Suspension si note &lt;<input type="number" min="0" max="5" step="0.1" name="st" [(ngModel)]="cert.form.suspendThreshold"></label><label>…après N avis<input type="number" min="1" name="sm" [(ngModel)]="cert.form.suspendMinReviews"></label></div>
+       <button class="btn" [disabled]="busy">Enregistrer les règles</button>
+     </form>
+   </article>
+   }
+
    <!-- ============ LIST TABS ============ -->
-   @if(tab!=='overview'&&tab!=='billing'){
+   @if(tab!=='overview'&&tab!=='billing'&&tab!=='certification'){
    <div class="card admin-table-card">
      <div class="section-row">
        <div><h3>{{tabLabel()}}</h3><small>{{state().total|number}} élément(s)</small></div>
@@ -316,7 +390,7 @@ export class AdminDashboardComponent implements OnInit{
  DOC_TYPES=DOC_TYPES;ROLES=ROLES;STATUS=STATUS;L=label;sc=statusClass;roleKeys=Object.keys(ROLES);
  meId=this.auth.userId();
  tabs:{id:Tab;label:string;icon:string}[]=[
-  {id:'overview',label:'Vue générale',icon:'grid'},{id:'billing',label:'Revenus',icon:'wallet'},{id:'users',label:'Utilisateurs',icon:'users'},{id:'teachers',label:'Enseignants',icon:'cap'},
+  {id:'overview',label:'Vue générale',icon:'grid'},{id:'billing',label:'Revenus',icon:'wallet'},{id:'certification',label:'Certification',icon:'shield'},{id:'users',label:'Utilisateurs',icon:'users'},{id:'teachers',label:'Enseignants',icon:'cap'},
   {id:'documents',label:'Documents',icon:'file'},{id:'schools',label:'Écoles',icon:'school'},{id:'jobs',label:'Offres',icon:'briefcase'},
   {id:'bookings',label:'Réservations',icon:'calendar'},{id:'payments',label:'Paiements',icon:'wallet'},{id:'reviews',label:'Avis',icon:'star'},
   {id:'audit',label:'Journal',icon:'clock'}];
@@ -331,7 +405,7 @@ export class AdminDashboardComponent implements OnInit{
  ngOnInit(){this.loadStats()}
  state():TabState{return this.states[this.tab]||(this.states[this.tab]={items:[],page:0,totalPages:0,total:0,loading:false})}
  tabLabel(){return this.tabs.find(t=>t.id===this.tab)?.label||''}
- go(t:Tab){this.tab=t;this.error='';if(t==='overview')this.loadStats();else if(t==='billing')this.loadBilling();else this.load(0)}
+ go(t:Tab){this.tab=t;this.error='';if(t==='overview')this.loadStats();else if(t==='billing')this.loadBilling();else if(t==='certification')this.loadCert();else this.load(0)}
  reload(){this.load(0)}
  goPage(p:number){this.load(p);window.scrollTo({top:0,behavior:'smooth'})}
  typed(){clearTimeout(this.debounce);this.debounce=setTimeout(()=>this.load(0),350)}
@@ -438,6 +512,60 @@ export class AdminDashboardComponent implements OnInit{
  openPayout(b:any){this.payoutFor=b.teacherId;this.payoutForm={method:'ORANGE_MONEY',reference:''}}
  doPayout(b:any){
   this.api.post('/api/v1/admin/billing/payouts',{teacherId:b.teacherId,...this.payoutForm}).subscribe({next:()=>{this.payoutFor=null;this.ok("Versement enregistré : l'enseignant est notifié.");this.loadBilling()},error:e=>this.error=errorMessage(e)});
+ }
+
+ // certification
+ REPORT_REASONS=REPORT_REASONS;LEVELS=LEVELS;SUBJECTS=SUBJECTS;
+ cert:any={settings:null,form:{},overview:null,reports:[],videos:[],suspended:[],questions:{}};
+ qf:any={subject:'',level:''};qform:any={};csvText='';importResult:any=null;
+ passRate(){const o=this.cert.overview;return o?.attempts?Math.round(o.passed*100/o.attempts):0}
+ loadCert(){
+  this.resetQuestion();
+  this.api.get<any>('/api/v1/admin/certification/settings').subscribe({next:x=>{this.cert.settings=x;this.cert.form={...x}},error:e=>this.error=errorMessage(e)});
+  this.api.get<any>('/api/v1/admin/certification/overview').subscribe({next:x=>this.cert.overview=x,error:()=>{}});
+  this.api.get<Page<any>>('/api/v1/admin/certification/reports',{status:'OPEN',size:50}).subscribe({next:x=>this.cert.reports=x.content,error:()=>{}});
+  this.api.get<any[]>('/api/v1/admin/certification/videos').subscribe({next:x=>this.cert.videos=x,error:()=>{}});
+  this.api.get<any[]>('/api/v1/admin/certification/suspended').subscribe({next:x=>this.cert.suspended=x,error:()=>{}});
+  if(this.qf.subject)this.loadQuestions(0);
+ }
+ loadQuestions(page:number){this.api.get<Page<any>>('/api/v1/admin/certification/questions',{...this.qf,page,size:20}).subscribe({next:x=>this.cert.questions=x,error:e=>this.error=errorMessage(e)})}
+ resetQuestion(){this.qform={subject:this.qf.subject||'',level:this.qf.level||LEVELS[2],text:'',choices:['','','',''],correctIndex:0}}
+ editQuestion(q:any){this.qform={id:q.id,subject:q.subject,level:q.level,text:q.text,choices:[...q.choiceList],correctIndex:q.correctIndex};window.scrollTo({top:document.querySelector('.question-form')!.getBoundingClientRect().top+window.scrollY-120,behavior:'smooth'})}
+ saveQuestion(){
+  this.busy=true;
+  const body={subject:this.qform.subject,level:this.qform.level,text:this.qform.text,choices:this.qform.choices,correctIndex:+this.qform.correctIndex};
+  const req=this.qform.id?this.api.put<any>(`/api/v1/admin/certification/questions/${this.qform.id}`,body):this.api.post<any>('/api/v1/admin/certification/questions',body);
+  req.subscribe({next:q=>{this.busy=false;this.ok('Question enregistrée.');this.qf={subject:q.subject,level:q.level};this.resetQuestion();this.loadCert()},error:e=>{this.busy=false;this.error=errorMessage(e)}});
+ }
+ deleteQuestion(q:any){if(!confirm('Retirer cette question de la banque ?'))return;this.api.delete(`/api/v1/admin/certification/questions/${q.id}`).subscribe({next:()=>this.loadCert(),error:e=>this.error=errorMessage(e)})}
+ readCsv(ev:Event){
+  const f=(ev.target as HTMLInputElement).files?.[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{let t=String(r.result||'');if(t.includes('\uFFFD')){const r2=new FileReader();r2.onload=()=>this.csvText=String(r2.result||'');r2.readAsText(f,'windows-1252');return}this.csvText=t};
+  r.readAsText(f,'utf-8');
+ }
+ downloadTemplate(){
+  const csv='matière;niveau;question;réponse 1;réponse 2;réponse 3;réponse 4;bonne réponse\nMathématiques;Lycée (BAC);Combien vaut 7 × 8 ?;54;56;64;48;2\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='modele-questions-profa.csv';a.click();
+ }
+ importCsv(){
+  this.busy=true;this.importResult=null;
+  this.api.post<any>('/api/v1/admin/certification/questions/import',{csv:this.csvText}).subscribe({next:r=>{this.busy=false;this.importResult=r;if(r.imported)this.csvText='';this.loadCert()},error:e=>{this.busy=false;this.error=errorMessage(e)}});
+ }
+ reviewVideo(v:any,status:string){
+  let reason:string|null=null;
+  if(status==='REJECTED'){reason=prompt('Motif du refus (communiqué à l’enseignant) :');if(!reason)return}
+  this.api.patch(`/api/v1/admin/certification/videos/${v.id}`,{},reason?{status,reason}:{status}).subscribe({next:()=>{this.ok(status==='APPROVED'?'Vidéo validée.':'Vidéo refusée.');this.loadCert()},error:e=>this.error=errorMessage(e)});
+ }
+ resolveReport(r:any,suspend:boolean){
+  const resolution=prompt(suspend?'Motif de la suspension (communiqué à l’enseignant) :':'Note de clôture (facultatif) :')??null;
+  if(suspend&&!resolution)return;
+  this.api.patch(`/api/v1/admin/certification/reports/${r.id}`,{resolution,suspend}).subscribe({next:()=>{this.ok(suspend?'Enseignant suspendu.':'Signalement classé.');this.loadCert()},error:e=>this.error=errorMessage(e)});
+ }
+ unsuspend(t:any){this.api.patch(`/api/v1/admin/certification/teachers/${t.id}/suspension`,{},{suspended:false}).subscribe({next:()=>{this.ok('Enseignant réactivé.');this.loadCert()},error:e=>this.error=errorMessage(e)})}
+ saveCertSettings(){
+  this.busy=true;
+  this.api.put<any>('/api/v1/admin/certification/settings',this.cert.form).subscribe({next:x=>{this.busy=false;this.cert.settings=x;this.cert.form={...x};this.ok('Règles de certification enregistrées.');this.loadCert()},error:e=>{this.busy=false;this.error=errorMessage(e)}});
  }
 
  // misc

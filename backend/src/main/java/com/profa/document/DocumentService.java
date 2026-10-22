@@ -1,6 +1,7 @@
 package com.profa.document;
 
 import com.profa.billing.BillingService;
+import com.profa.certification.CertificationService;
 import com.profa.job.ApplicationRepository;
 import com.profa.notification.NotificationService;
 import com.profa.security.CurrentUser;
@@ -34,12 +35,14 @@ public class DocumentService {
     private final NotificationService notifications;
     private final UserNames names;
     private final BillingService billing;
+    private final CertificationService certification;
 
     public DocumentService(TeacherDocumentRepository docs, DocumentFileRepository files, TeacherRepository teachers,
                            UserRepository users, ApplicationRepository applications, NotificationService notifications,
-                           UserNames names, BillingService billing) {
+                           UserNames names, BillingService billing, CertificationService certification) {
         this.docs = docs; this.files = files; this.teachers = teachers; this.users = users;
         this.applications = applications; this.notifications = notifications; this.names = names; this.billing = billing;
+        this.certification = certification;
     }
 
     /** Uploads (or replaces) the teacher's PDF of the given type; it goes back to PENDING review. */
@@ -126,6 +129,7 @@ public class DocumentService {
                     "Votre CV et votre diplôme ont été validés : votre profil affiche le badge « Vérifié ».", "/enseignants/" + p.getId());
         }
         teachers.save(p);
+        certification.refresh(teacherId);
     }
 
     /** Admin, the teacher, or a school the teacher applied to (ATS) may read the PDF. */

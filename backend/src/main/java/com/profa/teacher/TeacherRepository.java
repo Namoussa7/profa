@@ -13,6 +13,11 @@ public interface TeacherRepository extends JpaRepository<TeacherProfile, UUID> {
     List<TeacherProfile> findByVerifiedTrue();
     long countByVerifiedFalse();
     long countByDocumentsCompleteTrue();
+    long countByVideoStatus(String status);
+    long countBySuspendedTrue();
+    long countByCertifiedTrue();
+    List<TeacherProfile> findBySuspendedTrue();
+    List<TeacherProfile> findTop100ByVideoStatusOrderByUpdatedAtDesc(String status);
 
     /**
      * Public search, executed in the database with pagination.
@@ -21,6 +26,10 @@ public interface TeacherRepository extends JpaRepository<TeacherProfile, UUID> {
     @Query("""
             select p from TeacherProfile p
             where p.documentsComplete = true
+              and p.suspended = false
+              and (:requireCert = false or p.certificationCount > 0)
+              and (:certified = false or p.certified = true)
+              and (:homeSafe = false or p.homeSafe = true)
               and exists (select 1 from User u where u.id = p.userId and u.enabled = true)
               and (:verified = false or p.verified = true)
               and (:trial = false or p.trialLessonFree = true)
@@ -37,7 +46,9 @@ public interface TeacherRepository extends JpaRepository<TeacherProfile, UUID> {
     Page<TeacherProfile> search(@Param("q") String q, @Param("subject") String subject, @Param("level") String level,
                                 @Param("city") String city, @Param("mode") String mode,
                                 @Param("minRate") int minRate, @Param("maxRate") int maxRate,
-                                @Param("verified") boolean verified, @Param("trial") boolean trial, Pageable pageable);
+                                @Param("verified") boolean verified, @Param("trial") boolean trial,
+                                @Param("requireCert") boolean requireCert, @Param("certified") boolean certified,
+                                @Param("homeSafe") boolean homeSafe, Pageable pageable);
 
     @Query("""
             select p from TeacherProfile p

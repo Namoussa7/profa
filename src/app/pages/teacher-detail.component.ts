@@ -6,7 +6,7 @@ import {ActivatedRoute,Router,RouterLink} from '@angular/router';
 import {Title} from '@angular/platform-browser';
 import {ApiService,errorMessage} from '../core/api.service';
 import {AuthService} from '../core/auth/auth.service';
-import {LEVELS,MODES,initials,list,modes,stars} from '../core/labels';
+import {LEVELS,MODES,REPORT_REASONS,initials,list,modes,stars} from '../core/labels';
 
 @Component({
  standalone:true,
@@ -21,7 +21,7 @@ import {LEVELS,MODES,initials,list,modes,stars} from '../core/labels';
        <article class="card detail-head">
          <div class="avatar xl">@if(t.avatarUrl){<img [src]="t.avatarUrl" alt="">}@else{<span>{{ini()}}</span>}</div>
          <div>
-           <div class="tag-row">@if(t.verified){<span class="verified"><app-icon name="shield" [size]="14"/>Profil vérifié</span>}@if(t.trialLessonFree){<span class="pill gold"><app-icon name="gift" [size]="14"/>1er cours offert</span>}</div>
+           <div class="tag-row">@if(t.certified){<span class="badge-cert"><app-icon name="shield" [size]="14"/>Certifié Profa</span>}@if(t.verified){<span class="verified"><app-icon name="check" [size]="14"/>Profil vérifié</span>}@if(t.homeSafe){<span class="badge-home"><app-icon name="home" [size]="14"/>Domicile sécurisé</span>}@if(t.trialLessonFree){<span class="pill gold"><app-icon name="gift" [size]="14"/>1er cours offert</span>}</div>
            <h1>{{t.firstName}} {{t.lastName}}</h1>
            <p class="lead">{{t.headline||'Enseignant Profa'}}</p>
            <div class="rating">@if(t.reviewCount){<span class="stars">{{stars(t.ratingAvg)}}</span> <b>{{t.ratingAvg}}</b> · {{t.reviewCount}} avis}@else{<span class="new-badge">Nouveau sur Profa</span>}<span>· {{t.city||'Mali'}}{{t.district?' — '+t.district:''}}</span></div>
@@ -29,6 +29,7 @@ import {LEVELS,MODES,initials,list,modes,stars} from '../core/labels';
        </article>
        @if(t.introVideoUrl){<article class="card"><h3>Vidéo de présentation</h3><a class="text-link" [href]="t.introVideoUrl" target="_blank" rel="noopener">Regarder la vidéo <app-icon name="arrow" [size]="16"/></a></article>}
        <article class="card"><h3>À propos</h3><p class="prewrap">{{t.bio||'Cet enseignant n’a pas encore rédigé sa présentation.'}}</p></article>
+       @if(t.certifiedSubjects?.length){<article class="card"><h3>Matières certifiées par Profa</h3><p class="muted small">Test de connaissances réussi sur la plateforme.</p><div class="tag-row">@for(c of t.certifiedSubjects;track c){<span class="pill gold"><app-icon name="check" [size]="14"/>{{c}}</span>}</div></article>}
        <article class="card facts">
          <div><small>Matières</small><div class="tag-row">@for(s of L(t.subjects);track s){<span class="pill">{{s}}</span>}@empty{<span class="muted">Non renseigné</span>}</div></div>
          <div><small>Niveaux</small><div class="tag-row">@for(s of L(t.levels);track s){<span class="pill soft">{{s}}</span>}@empty{<span class="muted">Tous niveaux</span>}</div></div>
@@ -81,12 +82,30 @@ import {LEVELS,MODES,initials,list,modes,stars} from '../core/labels';
          }
          @if(ok){<p class="success" role="status">{{ok}}</p>}
          @if(actionError){<p class="error" role="alert">{{actionError}}</p>}
+         @if(auth.role()==='PARENT'||auth.role()==='SCHOOL'){<button type="button" class="text-link report-link" (click)="reportOpen=true"><app-icon name="help" [size]="14"/> Signaler un problème</button>}
          <ul class="guarantees"><li><app-icon name="check" [size]="16"/>Paiement Mobile Money ou espèces</li><li><app-icon name="check" [size]="16"/>Annulation gratuite avant le cours</li><li><app-icon name="check" [size]="16"/>Avis vérifiés après chaque cours</li></ul>
        </div>
      </aside>
    </div>
    }
- </section>`
+ </section>
+ @if(reportOpen){
+ <div class="modal-backdrop" (click)="reportOpen=false">
+   <div class="modal" role="dialog" aria-modal="true" aria-label="Signaler" (click)="$event.stopPropagation()">
+     <button class="modal-close" (click)="reportOpen=false" aria-label="Fermer"><app-icon name="x" [size]="18"/></button>
+     <h2>Signaler un problème</h2>
+     <p class="muted">Votre signalement est confidentiel et examiné par l’équipe Profa. En cas de danger immédiat, contactez les autorités.</p>
+     @if(reportDone){<div class="result-panel ok"><app-icon name="check" [size]="22"/><div><strong>Merci</strong><p>{{reportDone}}</p></div></div>}
+     @else{
+     <form class="stack" (ngSubmit)="sendReport()">
+       <label>Motif<select name="reason" [(ngModel)]="report.reason">@for(k of reportKeys;track k){<option [value]="k">{{REPORT_REASONS[k]}}</option>}</select></label>
+       <label>Détails<textarea name="details" rows="4" [(ngModel)]="report.details" placeholder="Dates, ce qui s’est passé…"></textarea></label>
+       <button class="btn danger full" [disabled]="busy">Envoyer le signalement</button>
+     </form>
+     }
+   </div>
+ </div>
+ }`
 })
 export class TeacherDetailComponent implements OnInit{
  api=inject(ApiService);auth=inject(AuthService);route=inject(ActivatedRoute);router=inject(Router);title=inject(Title);
@@ -96,6 +115,12 @@ export class TeacherDetailComponent implements OnInit{
  b:any={date:'',time:'17:00',duration:60,mode:'ONLINE',address:''};
  r:any={subject:'',level:'',budget:null,notes:''};
 
+ REPORT_REASONS=REPORT_REASONS;reportKeys=Object.keys(REPORT_REASONS);reportOpen=false;reportDone='';report:any={reason:'ABSENCE',details:''};
+ sendReport(){
+  this.busy=true;
+  this.api.post<any>('/api/v1/reports',{teacherId:this.t.userId,...this.report}).subscribe({
+   next:r=>{this.busy=false;this.reportDone=r.message},error:e=>{this.busy=false;this.actionError=errorMessage(e);this.reportOpen=false}});
+ }
  ngOnInit(){this.route.paramMap.subscribe(p=>this.load(p.get('id')!))}
  load(id:string){
   this.api.get<any>(`/api/v1/teachers/${id}`).subscribe({
@@ -108,7 +133,7 @@ export class TeacherDetailComponent implements OnInit{
  ini(){return initials(this.t?.firstName,this.t?.lastName)}
  isSelf(){return this.auth.userId()===this.t?.userId}
  subjects(){const s=list(this.t?.subjects);return s.length?s:['Soutien scolaire']}
- teacherModes(){const m=list(this.t?.teachingModes).filter(x=>MODES[x]);return m.length?m:Object.keys(MODES)}
+ teacherModes(){const m=list(this.t?.teachingModes).filter(x=>MODES[x]&&(x!=='HOME'||this.t?.homeSafe));return m.length?m:Object.keys(MODES)}
  private done(msg:string){this.busy=false;this.ok=msg;this.actionError=''}
  private fail(e:any){this.busy=false;this.ok='';this.actionError=errorMessage(e)}
  book(){

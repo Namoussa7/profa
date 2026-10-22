@@ -1,5 +1,6 @@
 package com.profa.booking;
 
+import com.profa.billing.BillingService;
 import com.profa.course.CourseRequest;
 import com.profa.course.CourseRequestRepository;
 import com.profa.notification.NotificationService;
@@ -31,10 +32,11 @@ public class BookingController {
     final ReviewRepository reviews;
     final NotificationService notifications;
     final UserNames names;
+    final BillingService billing;
 
     public BookingController(BookingRepository r, TeacherRepository t, CourseRequestRepository c,
-                             ReviewRepository rv, NotificationService n, UserNames names) {
-        this.r = r; teachers = t; requests = c; reviews = rv; notifications = n; this.names = names;
+                             ReviewRepository rv, NotificationService n, UserNames names, BillingService billing) {
+        this.r = r; teachers = t; requests = c; reviews = rv; notifications = n; this.names = names; this.billing = billing;
     }
 
     public record CreateBooking(UUID teacherId, UUID courseRequestId, LocalDateTime startsAt, LocalDateTime endsAt,
@@ -79,6 +81,9 @@ public class BookingController {
         if (minutes > 8 * 60) throw CurrentUser.badRequest("Un cours ne peut pas dépasser 8 heures");
         String mode = in.mode() == null ? "ONLINE" : in.mode().toUpperCase(Locale.ROOT);
         if (!MODES.contains(mode)) throw CurrentUser.badRequest("Mode de cours invalide");
+        if (teacher.isSuspended()) throw CurrentUser.badRequest("Cet enseignant n'est pas disponible actuellement");
+        if ("HOME".equals(mode) && billing.settings().isRequireRecordForHome() && !teacher.isHomeSafe())
+            throw CurrentUser.badRequest("Cet enseignant ne peut pas encore donner de cours à domicile (casier judiciaire non validé). Choisissez « En ligne ».");
 
         final UUID tid = teacherId;
         boolean overlap = r.findByTeacherIdOrderByStartsAtDesc(tid).stream()

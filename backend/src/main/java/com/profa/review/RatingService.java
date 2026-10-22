@@ -1,5 +1,6 @@
 package com.profa.review;
 
+import com.profa.certification.CertificationService;
 import com.profa.teacher.TeacherRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,10 +13,12 @@ public class RatingService {
 
     private final ReviewRepository reviews;
     private final TeacherRepository teachers;
+    private final CertificationService certification;
 
-    public RatingService(ReviewRepository reviews, TeacherRepository teachers) {
+    public RatingService(ReviewRepository reviews, TeacherRepository teachers, CertificationService certification) {
         this.reviews = reviews;
         this.teachers = teachers;
+        this.certification = certification;
     }
 
     @Transactional
@@ -25,5 +28,6 @@ public class RatingService {
             p.setReviewCount((int) reviews.countByTeacherId(teacherUserId));
             teachers.save(p);
         });
+        certification.checkRating(teacherUserId);
     }
 }

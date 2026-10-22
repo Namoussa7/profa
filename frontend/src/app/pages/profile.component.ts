@@ -67,7 +67,8 @@ import {CITIES,LEVELS,MODES,SUBJECTS,initials,list,passwordIssues} from '../core
              <label>Salaire souhaité (écoles, FCFA/mois)<input type="number" min="0" name="salaryExpectation" [(ngModel)]="teacher.salaryExpectation"></label>
              <label class="full">Disponibilités<textarea name="availability" rows="2" [(ngModel)]="teacher.availabilityJson" placeholder="Lun–Ven 17h–20h, samedi matin"></textarea></label>
              <label>Photo de profil (lien URL)<input type="url" name="avatarUrl" [(ngModel)]="teacher.avatarUrl" placeholder="https://…/photo.jpg"><small class="muted">Aperçu immédiat dans la carte de gauche.</small></label>
-             <label>Vidéo de présentation (lien)<input type="url" name="introVideoUrl" [(ngModel)]="teacher.introVideoUrl" placeholder="YouTube, TikTok…"></label>
+             <label>Vidéo de présentation (lien)<input type="url" name="introVideoUrl" [(ngModel)]="teacher.introVideoUrl" placeholder="YouTube, TikTok…">
+               <small class="muted">2-3 min : présentez-vous et expliquez une notion de votre matière. @switch(teacher.videoStatus){@case('PENDING'){<b>En cours de vérification.</b>}@case('APPROVED'){<b class="ok-text">Validée ✓</b>}@case('REJECTED'){<b class="ko-text">Refusée : {{teacher.videoRejectionReason}}</b>}}</small></label>
              <label class="check full"><input type="checkbox" name="trial" [(ngModel)]="teacher.trialLessonFree"> Je propose le premier cours d’essai gratuit</label>
            </div>
            <p class="muted small">Adresse exacte : partagée uniquement avec les parents ayant réservé.</p>

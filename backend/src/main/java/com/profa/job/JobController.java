@@ -118,6 +118,8 @@ public class JobController {
         UUID me = CurrentUser.id(a);
         JobOffer j = jobs.findById(id).orElseThrow(() -> CurrentUser.notFound("Offre"));
         if (!"OPEN".equals(j.getStatus())) throw CurrentUser.badRequest("Cette offre n'est plus ouverte");
+        if (teachers.findByUserId(me).map(TeacherProfile::isSuspended).orElse(false))
+            throw CurrentUser.badRequest("Votre profil est suspendu : contactez l'équipe Profa");
         if (!teachers.findByUserId(me).map(TeacherProfile::isDocumentsComplete).orElse(false))
             throw CurrentUser.badRequest("Envoyez d'abord votre CV et votre diplôme en PDF depuis votre espace pour postuler");
         if (apps.existsByJobIdAndTeacherId(id, me))

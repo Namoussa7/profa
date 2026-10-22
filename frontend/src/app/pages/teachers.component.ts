@@ -27,6 +27,7 @@ import {CITIES,LEVELS,MODES,SUBJECTS,initials,list,modes,stars} from '../core/la
    <div class="filters">
      <select [(ngModel)]="f.level" (ngModelChange)="apply()" aria-label="Niveau"><option value="">Tous niveaux</option>@for(l of LEVELS;track l){<option [value]="l">{{l}}</option>}</select>
      <select [(ngModel)]="f.mode" (ngModelChange)="apply()" aria-label="Mode de cours"><option value="">Tous les modes</option>@for(m of modeKeys;track m){<option [value]="m">{{MODES[m]}}</option>}</select>
+     <label class="toggle"><input type="checkbox" [(ngModel)]="f.certified" (ngModelChange)="apply()"> Certifiés Profa</label>
      <label class="toggle"><input type="checkbox" [(ngModel)]="f.verified" (ngModelChange)="apply()"> Vérifiés uniquement</label>
      <label class="toggle"><input type="checkbox" [(ngModel)]="f.trial" (ngModelChange)="apply()"> 1er cours offert</label>
      <select class="sort" [(ngModel)]="f.sort" (ngModelChange)="apply()" aria-label="Trier par"><option value="relevance">Pertinence</option><option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option><option value="experience">Plus d’expérience</option></select>
@@ -38,7 +39,7 @@ import {CITIES,LEVELS,MODES,SUBJECTS,initials,list,modes,stars} from '../core/la
        <article class="teacher modern-card">
          <div class="card-top">
            <a class="avatar" [routerLink]="['/enseignants',t.id]">@if(t.avatarUrl){<img [src]="t.avatarUrl" alt="">}@else{<span>{{ini(t)}}</span>}</a>
-           <div class="card-flags">@if(t.verified){<span class="verified"><app-icon name="check" [size]="14"/>Vérifié</span>}<button type="button" class="fav" [class.on]="favs.has(t.userId)" (click)="toggleFav(t)" [attr.aria-label]="favs.has(t.userId)?'Retirer des favoris':'Ajouter aux favoris'"><app-icon name="heart" [size]="17"/></button></div>
+           <div class="card-flags">@if(t.certified){<span class="badge-cert"><app-icon name="shield" [size]="14"/>Certifié Profa</span>}@else if(t.verified){<span class="verified"><app-icon name="check" [size]="14"/>Vérifié</span>}@if(t.homeSafe){<span class="badge-home" title="Casier judiciaire vérifié"><app-icon name="home" [size]="14"/></span>}<button type="button" class="fav" [class.on]="favs.has(t.userId)" (click)="toggleFav(t)" [attr.aria-label]="favs.has(t.userId)?'Retirer des favoris':'Ajouter aux favoris'"><app-icon name="heart" [size]="17"/></button></div>
          </div>
          <a [routerLink]="['/enseignants',t.id]"><h3>{{t.firstName}} {{t.lastName}}</h3></a>
          <p class="teacher-role">{{t.headline||'Enseignant Profa'}}</p>
@@ -60,19 +61,19 @@ export class TeachersComponent implements OnInit{
  SUBJECTS=SUBJECTS;CITIES=CITIES;LEVELS=LEVELS;MODES=MODES;modeKeys=Object.keys(MODES);stars=stars;
  teachers:any[]=[];favs=new Set<string>();loading=false;error='';page=0;total=0;totalPages=0;
  private debounce:any;private seq=0;
- f:any={subject:'',city:'',level:'',mode:'',maxRate:null,verified:false,trial:false,sort:'relevance'};
+ f:any={subject:'',city:'',level:'',mode:'',maxRate:null,verified:false,certified:false,trial:false,sort:'relevance'};
 
  ngOnInit(){
   this.route.queryParamMap.subscribe(q=>{
-   this.f={subject:q.get('subject')||'',city:q.get('city')||'',level:q.get('level')||'',mode:q.get('mode')||'',maxRate:q.get('maxRate')?+q.get('maxRate')!:null,verified:q.get('verified')==='true',trial:q.get('trial')==='true',sort:q.get('sort')||'relevance'};
+   this.f={subject:q.get('subject')||'',city:q.get('city')||'',level:q.get('level')||'',mode:q.get('mode')||'',maxRate:q.get('maxRate')?+q.get('maxRate')!:null,verified:q.get('verified')==='true',certified:q.get('certified')==='true',trial:q.get('trial')==='true',sort:q.get('sort')||'relevance'};
    this.load();
   });
   if(this.auth.isLogged())this.api.get<string[]>('/api/v1/favorites').subscribe({next:x=>this.favs=new Set(x),error:()=>{}});
  }
  /** Filters live in the URL so a search can be shared or bookmarked. */
- apply(){const f=this.f;this.router.navigate([],{queryParams:{subject:f.subject||null,city:f.city||null,level:f.level||null,mode:f.mode||null,maxRate:f.maxRate||null,verified:f.verified||null,trial:f.trial||null,sort:f.sort!=='relevance'?f.sort:null}})}
+ apply(){const f=this.f;this.router.navigate([],{queryParams:{subject:f.subject||null,city:f.city||null,level:f.level||null,mode:f.mode||null,maxRate:f.maxRate||null,verified:f.verified||null,certified:f.certified||null,trial:f.trial||null,sort:f.sort!=='relevance'?f.sort:null}})}
  reset(){this.router.navigate([],{queryParams:{}})}
- active(){const f=this.f;return !!(f.subject||f.city||f.level||f.mode||f.maxRate||f.verified||f.trial)}
+ active(){const f=this.f;return !!(f.subject||f.city||f.level||f.mode||f.maxRate||f.verified||f.certified||f.trial)}
  /** Search while typing (300 ms pause) without spamming the API. */
  typed(){clearTimeout(this.debounce);this.debounce=setTimeout(()=>this.apply(),350)}
  load(append=false){

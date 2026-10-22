@@ -2,6 +2,7 @@ package com.profa.admin;
 
 import com.profa.auth.PasswordResetService;
 import com.profa.booking.*;
+import com.profa.certification.CertificationService;
 import com.profa.common.MailService;
 import com.profa.common.PageResponse;
 import com.profa.course.*;
@@ -60,6 +61,7 @@ public class AdminController {
     final MailService mail;
     final UserStatusCache status;
     final UserNames names;
+    final CertificationService certification;
 
     public AdminController(UserRepository users, TeacherRepository teachers, SchoolRepository schools,
                            TeacherDocumentRepository docs, DocumentService documents, JobRepository jobs,
@@ -67,13 +69,14 @@ public class AdminController {
                            PaymentService paymentService, ReviewRepository reviews, RatingService ratings,
                            CourseRequestRepository courseRequests, NotificationService notifications,
                            AuditLogRepository audit, UserDeletionService deletion, PasswordResetService resets,
-                           PasswordEncoder encoder, MailService mail, UserStatusCache status, UserNames names) {
+                           PasswordEncoder encoder, MailService mail, UserStatusCache status, UserNames names,
+                           CertificationService certification) {
         this.users = users; this.teachers = teachers; this.schools = schools; this.docs = docs; this.documents = documents;
         this.jobs = jobs; this.applications = applications; this.bookings = bookings; this.payments = payments;
         this.paymentService = paymentService; this.reviews = reviews; this.ratings = ratings;
         this.courseRequests = courseRequests; this.notifications = notifications; this.audit = audit;
         this.deletion = deletion; this.resets = resets; this.encoder = encoder; this.mail = mail;
-        this.status = status; this.names = names;
+        this.status = status; this.names = names; this.certification = certification;
     }
 
     // ---------------------------------------------------------------- helpers
@@ -293,6 +296,7 @@ public class AdminController {
         notifications.notify(p.getUserId(), "VERIFICATION", "Profil vérifié",
                 "Votre profil enseignant est désormais vérifié et mis en avant dans la recherche.", "/enseignants/" + p.getId());
         log(a, "TEACHER_VERIFY", "TEACHER", id, null);
+        certification.refresh(p.getUserId());
         return saved;
     }
 
@@ -301,7 +305,9 @@ public class AdminController {
         TeacherProfile p = teachers.findById(id).orElseThrow(() -> CurrentUser.notFound("Enseignant"));
         p.setVerified(false);
         log(a, "TEACHER_UNVERIFY", "TEACHER", id, null);
-        return teachers.save(p);
+        TeacherProfile saved = teachers.save(p);
+        certification.refresh(p.getUserId());
+        return saved;
     }
 
     @GetMapping("/documents")

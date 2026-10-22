@@ -83,6 +83,8 @@ public class CourseRequestController {
                 || (isTarget && Set.of("ACCEPTED", "DECLINED").contains(next))
                 || (isParent && "CANCELLED".equals(next));
         if (!allowed) throw CurrentUser.forbidden();
+        if (isTarget && "ACCEPTED".equals(next) && teachers.findByUserId(me).map(t -> t.isSuspended()).orElse(false))
+            throw CurrentUser.badRequest("Votre profil est suspendu : contactez l'équipe Profa");
         if (isTarget && "ACCEPTED".equals(next) && !teachers.findByUserId(me).map(t -> t.isDocumentsComplete()).orElse(false))
             throw CurrentUser.badRequest("Envoyez d'abord votre CV et votre diplôme en PDF depuis votre espace");
         if (!"PENDING".equals(x.getStatus()) && !CurrentUser.isAdmin(a))

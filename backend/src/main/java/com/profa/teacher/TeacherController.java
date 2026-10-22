@@ -1,5 +1,9 @@
 package com.profa.teacher;
 
+import com.profa.billing.BillingService;
+import com.profa.certification.CertificationService;
+import com.profa.certification.TeacherCertification;
+import com.profa.certification.TeacherCertificationRepository;
 import com.profa.common.PageResponse;
 import com.profa.security.CurrentUser;
 import com.profa.user.User;
@@ -24,9 +28,13 @@ public class TeacherController {
 
     final TeacherRepository repo;
     final UserRepository users;
+    final BillingService billing;
+    final CertificationService certification;
+    final TeacherCertificationRepository certifications;
 
-    public TeacherController(TeacherRepository r, UserRepository u) {
-        repo = r; users = u;
+    public TeacherController(TeacherRepository r, UserRepository u, BillingService billing, CertificationService certification,
+                             TeacherCertificationRepository certifications) {
+        repo = r; users = u; this.billing = billing; this.certification = certification; this.certifications = certifications;
     }
 
     /** Public view of a teacher: no address, no salary expectation, no e-mail/phone. */
@@ -34,16 +42,29 @@ public class TeacherController {
                               String city, String district, Integer hourlyRate, boolean verified, Integer experienceYears,
                               String languages, String subjects, String levels, String teachingModes, boolean trialLessonFree,
                               String avatarUrl, String introVideoUrl, String availabilityJson,
-                              double ratingAvg, long reviewCount, boolean documentsComplete) {}
+                              double ratingAvg, long reviewCount, boolean documentsComplete,
+                              boolean certified, boolean homeSafe, List<String> certifiedSubjects) {}
 
     static TeacherCard card(TeacherProfile p, User u) {
+        return card(p, u, List.of());
+    }
+
+    static TeacherCard card(TeacherProfile p, User u, List<String> certifiedSubjects) {
         String first = u == null ? "Enseignant" : u.getFirstName();
         String lastInitial = u == null || u.getLastName() == null || u.getLastName().isBlank() ? "" : u.getLastName().charAt(0) + ".";
         return new TeacherCard(p.getId(), p.getUserId(), first, lastInitial, p.getHeadline(), p.getBio(),
                 p.getCity(), p.getDistrict(), p.getHourlyRate(), p.isVerified(), p.getExperienceYears(), p.getLanguages(),
                 p.getSubjects(), p.getLevels(), p.getTeachingModes(), p.isTrialLessonFree(), p.getAvatarUrl(),
-                p.getIntroVideoUrl(), p.getAvailabilityJson(), Math.round(p.getRatingAvg() * 10) / 10.0, p.getReviewCount(),
-                p.isDocumentsComplete());
+                "APPROVED".equals(p.getVideoStatus()) ? p.getIntroVideoUrl() : null, p.getAvailabilityJson(),
+                Math.round(p.getRatingAvg() * 10) / 10.0, p.getReviewCount(), p.isDocumentsComplete(),
+                p.isCertified(), p.isHomeSafe(), certifiedSubjects);
+    }
+
+    private Map<UUID, List<String>> certifiedSubjects(Collection<UUID> teacherIds) {
+        Map<UUID, List<String>> out = new HashMap<>();
+        for (TeacherCertification c : certifications.findByTeacherIdIn(teacherIds))
+            out.computeIfAbsent(c.getTeacherId(), k -> new ArrayList<>()).add(c.getSubject() + " · " + c.getLevel());
+        return out;
     }
 
     static String like(String v) {
@@ -71,17 +92,23 @@ public class TeacherController {
                                                             @RequestParam(required = false) Integer maxRate,
                                                             @RequestParam(defaultValue = "false") boolean verified,
                                                             @RequestParam(defaultValue = "false") boolean trial,
+                                                            @RequestParam(defaultValue = "false") boolean certified,
                                                             @RequestParam(defaultValue = "relevance") String sort,
                                                             @RequestParam(defaultValue = "0") int page,
                                                             @RequestParam(required = false) Integer size) {
+        var s = billing.settings();
+        // Home lessons: only teachers with an approved criminal record when the rule is on.
+        boolean homeOnly = mode != null && mode.trim().equalsIgnoreCase("HOME") && s.isRequireRecordForHome();
         var result = repo.search(like(q), like(subject), like(level), like(city), like(mode),
                 minRate == null ? -1 : minRate, maxRate == null ? -1 : maxRate, verified, trial,
+                s.isRequireCertification(), certified, homeOnly,
                 PageRequest.of(Math.max(page, 0), PageResponse.size(size, 12), sortOf(sort)));
+        Map<UUID, List<String>> certs = certifiedSubjects(result.getContent().stream().map(TeacherProfile::getUserId).toList());
         Map<UUID, User> byId = users.findAllById(result.getContent().stream().map(TeacherProfile::getUserId).toList())
                 .stream().collect(Collectors.toMap(User::getId, Function.identity()));
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.SECONDS).cachePublic())
-                .body(PageResponse.of(result, p -> card(p, byId.get(p.getUserId()))));
+                .body(PageResponse.of(result, p -> card(p, byId.get(p.getUserId()), certs.getOrDefault(p.getUserId(), List.of()))));
     }
 
     /** Profile id or user id. Incomplete profiles are only visible to their owner and admins. */
@@ -92,8 +119,8 @@ public class TeacherController {
         User u = users.findById(p.getUserId()).orElseThrow(() -> CurrentUser.notFound("Enseignant"));
         boolean privileged = a != null && a.isAuthenticated() && !"anonymousUser".equals(a.getName())
                 && (CurrentUser.isAdmin(a) || a.getName().equals(p.getUserId().toString()));
-        if (!privileged && (!u.isEnabled() || !p.isDocumentsComplete())) throw CurrentUser.notFound("Enseignant");
-        return card(p, u);
+        if (!privileged && (!u.isEnabled() || !p.isDocumentsComplete() || p.isSuspended())) throw CurrentUser.notFound("Enseignant");
+        return card(p, u, certifiedSubjects(List.of(p.getUserId())).getOrDefault(p.getUserId(), List.of()));
     }
 
     @GetMapping("/me")
@@ -121,6 +148,7 @@ public class TeacherController {
         p.setHourlyRate(in.getHourlyRate());
         p.setSalaryExpectation(in.getSalaryExpectation());
         p.setAvatarUrl(in.getAvatarUrl());
+        certification.videoChanged(p, in.getIntroVideoUrl());
         p.setIntroVideoUrl(in.getIntroVideoUrl());
         p.setExperienceYears(in.getExperienceYears());
         p.setLanguages(in.getLanguages());
@@ -130,6 +158,8 @@ public class TeacherController {
         p.setTeachingModes(in.getTeachingModes());
         p.setTrialLessonFree(in.isTrialLessonFree());
         p.setUpdatedAt(Instant.now());
-        return repo.save(p);
+        TeacherProfile saved = repo.save(p);
+        certification.refresh(saved.getUserId());
+        return repo.findById(saved.getId()).orElse(saved);
     }
 }

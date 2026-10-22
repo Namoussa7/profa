@@ -45,6 +45,15 @@ import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list
      <div class="profile-progress"><strong>{{completion}}%</strong><div><div class="progress"><span [style.width.%]="completion"></span></div><small>Profil complété</small></div>@if(completion<100){<a class="btn small" routerLink="/profil">Compléter</a>}</div></div>
    }
 
+   @if(role==='TEACHER'&&cert){
+   <article class="card block cert-card" [class.done]="cert.certified">
+     <div class="section-row"><div><h3><span class="h-ic"><app-icon name="shield" [size]="18"/></span>{{cert.certified?'Vous êtes Certifié Profa':'Certification Profa'}}</h3>
+       <small>@if(cert.suspended){<b class="ko-text">Profil suspendu : {{cert.suspendedReason}}</b>}@else{<span>{{certDone()}} / {{cert.steps.length}} étapes · les profils certifiés sont choisis en priorité par les parents</span>}</small></div>
+       <a class="btn small" routerLink="/certification">{{cert.certified?'Voir':'Continuer'}}</a></div>
+     <div class="cert-mini">@for(s of cert.steps;track s.key){<span [class.done]="s.done"><app-icon [name]="s.done?'check':'clock'" [size]="14"/>{{s.label}}</span>}</div>
+   </article>
+   }
+
    @if(role==='TEACHER'&&earnings){
    <article class="card block earnings">
      <div class="section-row"><div><h3><span class="h-ic"><app-icon name="wallet" [size]="18"/></span>Mes revenus</h3>
@@ -218,6 +227,7 @@ export class DashboardComponent implements OnInit{
    this.api.get<string[]>('/api/v1/favorites').subscribe({next:ids=>{this.favorites=[];ids.forEach(id=>this.api.get<any>(`/api/v1/teachers/${id}`).subscribe({next:t=>this.favorites=[...this.favorites,t],error:()=>{}}))},error:()=>{}});
   }
   if(this.role==='TEACHER'){
+   this.api.get<any>('/api/v1/certification/status').subscribe({next:x=>this.cert=x,error:()=>{}});
    this.api.get<any>('/api/v1/billing/teacher').subscribe({next:x=>this.earnings=x,error:()=>{}});
    this.api.get<any>('/api/v1/teachers/me').subscribe({next:p=>{this.profile=p;this.computeCompletion()},error:()=>{}});
    this.api.get<any[]>('/api/v1/documents/mine').subscribe({next:x=>{this.documents=x;this.docsLoaded=true;this.computeCompletion()},error:()=>{this.docsLoaded=true}});
@@ -229,7 +239,8 @@ export class DashboardComponent implements OnInit{
    this.api.get<any[]>('/api/v1/jobs/mine').subscribe({next:x=>this.jobs=x,error:e=>this.ko(e)});
   }
  }
- earnings:any=null;billing:any=null;
+ earnings:any=null;billing:any=null;cert:any=null;
+ certDone(){return (this.cert?.steps||[]).filter((s:any)=>s.done).length}
  loadBilling(){this.api.get<any>('/api/v1/billing/school').subscribe({next:x=>this.billing=x,error:()=>{}})}
  planLabel(c:string){return ({LAUNCH:'Lancement (gratuit)',FREE:'Gratuite',STANDARD:'Standard',PREMIUM:'Premium'} as any)[c]||c}
  pendingSub(){return this.billing?.history?.find((h:any)=>h.status==='PENDING')}

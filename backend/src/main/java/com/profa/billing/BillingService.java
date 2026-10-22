@@ -53,6 +53,10 @@ public class BillingService {
         return settingsRepo.findById(1).orElseGet(() -> settingsRepo.save(new PlatformSettings()));
     }
 
+    public PlatformSettings saveSettings(PlatformSettings s) {
+        return settingsRepo.save(s);
+    }
+
     @Transactional
     public PlatformSettings updateSettings(PlatformSettings in) {
         if (in.getCommissionRate() < 0 || in.getCommissionRate() > 50 || in.getLoyaltyRate() < 0 || in.getLoyaltyRate() > 50)

@@ -12,6 +12,7 @@ export const routes:Routes=[
  {path:'enseignants',loadComponent:()=>import('./pages/teachers.component').then(m=>m.TeachersComponent),title:'Trouver un enseignant — Profa'},
  {path:'enseignants/:id',loadComponent:()=>import('./pages/teacher-detail.component').then(m=>m.TeacherDetailComponent),title:'Profil enseignant — Profa'},
  {path:'emplois',loadComponent:()=>import('./pages/jobs.component').then(m=>m.JobsComponent),canActivate:[notParentGuard],title:'Offres d’emploi enseignants — Profa'},
+ {path:'certification',loadComponent:()=>import('./pages/certification.component').then(m=>m.CertificationComponent),canActivate:[roleGuard('TEACHER')],title:'Certification — Profa'},
  {path:'tarifs',loadComponent:()=>import('./pages/pricing.component').then(m=>m.PricingComponent),title:'Tarifs — Profa'},
  {path:'comment-ca-marche',loadComponent:()=>import('./pages/how-it-works.component').then(m=>m.HowItWorksComponent),title:'Comment ça marche — Profa'},
  {path:'dashboard',loadComponent:()=>import('./pages/dashboard.component').then(m=>m.DashboardComponent),canActivate:[authGuard],title:'Mon espace — Profa'},

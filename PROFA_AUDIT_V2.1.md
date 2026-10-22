@@ -103,3 +103,11 @@ Interface retenue : **un modèle hybride Preply + Superprof** (recherche matièr
 - **Versements** : l'admin voit le solde dû à chaque enseignant et enregistre le versement (méthode + référence) ; l'enseignant est notifié et suit ses revenus dans son espace.
 - **Page publique /tarifs** présentant les formules et la commission.
 - À brancher plus tard : paiement automatique des abonnements et des versements via un agrégateur (CinetPay, PayDunya…).
+
+
+## 8. Version 2.4 — certification des enseignants
+- **Test de connaissances** par matière et niveau : questions tirées au hasard dans une banque, chronomètre, note minimale, tentatives limitées puis délai d'attente. Les bonnes réponses ne sont jamais envoyées au navigateur.
+- **Badges** : « Vérifié » (documents), « Certifié Profa » (vérifié + test réussi + vidéo validée), « Domicile sécurisé » (casier judiciaire approuvé, **obligatoire pour les cours à domicile** par défaut).
+- **Contrôle qualité** : suspension automatique sous un seuil de note (3,5/5 après 5 avis par défaut), signalements des parents/écoles (motif « sécurité » marqué urgent), réactivation par l'admin.
+- **Administration → Certification** : import de questions depuis Excel (CSV point-virgule, modèle téléchargeable), éditeur de questions, validation des vidéos, signalements, suspensions et règles (nombre de questions, durée, note, tentatives, délai, seuils).
+- **Test obligatoire pour apparaître dans la recherche** : désactivé par défaut tant que la banque de questions n'est pas remplie ; à activer dans l'onglet Certification.

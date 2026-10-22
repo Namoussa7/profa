@@ -34,6 +34,17 @@ public class TeacherProfile {
     /** Denormalized from reviews for fast sorting/search at scale. */
     private double ratingAvg;
     private int reviewCount;
+    /** « Certifié Profa » : vérifié + au moins un test réussi + vidéo validée. */
+    private boolean certified;
+    private int certificationCount;
+    /** Casier judiciaire approuvé : badge « Domicile sécurisé », requis pour les cours à domicile. */
+    private boolean homeSafe;
+    /** NONE, PENDING, APPROVED, REJECTED. */
+    private String videoStatus = "NONE";
+    private String videoRejectionReason;
+    /** Hidden from search and cannot be booked while suspended. */
+    private boolean suspended;
+    private String suspendedReason;
     private Instant updatedAt = Instant.now();
 
     public UUID getId(){return id;}
@@ -58,5 +69,12 @@ public class TeacherProfile {
     public boolean isDocumentsComplete(){return documentsComplete;} public void setDocumentsComplete(boolean v){documentsComplete=v;}
     public double getRatingAvg(){return ratingAvg;} public void setRatingAvg(double v){ratingAvg=v;}
     public int getReviewCount(){return reviewCount;} public void setReviewCount(int v){reviewCount=v;}
+    public boolean isCertified(){return certified;} public void setCertified(boolean v){certified=v;}
+    public int getCertificationCount(){return certificationCount;} public void setCertificationCount(int v){certificationCount=v;}
+    public boolean isHomeSafe(){return homeSafe;} public void setHomeSafe(boolean v){homeSafe=v;}
+    public String getVideoStatus(){return videoStatus;} public void setVideoStatus(String v){videoStatus=v;}
+    public String getVideoRejectionReason(){return videoRejectionReason;} public void setVideoRejectionReason(String v){videoRejectionReason=v;}
+    public boolean isSuspended(){return suspended;} public void setSuspended(boolean v){suspended=v;}
+    public String getSuspendedReason(){return suspendedReason;} public void setSuspendedReason(String v){suspendedReason=v;}
     public Instant getUpdatedAt(){return updatedAt;} public void setUpdatedAt(Instant v){updatedAt=v;}
 }
