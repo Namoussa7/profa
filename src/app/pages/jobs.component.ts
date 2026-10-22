@@ -31,7 +31,7 @@ import {CITIES,CONTRACTS,LEVELS,SUBJECTS} from '../core/labels';
    <div class="grid jobs-grid">
      @for(j of jobs;track j.id){
        <article class="job modern-card">
-         <div class="job-head"><span class="pill">{{j.contractType||'Enseignement'}}</span><span class="job-city">{{j.city||'Mali'}}</span></div>
+         <div class="job-head"><span class="tag-row tight"><span class="pill">{{j.contractType||'Enseignement'}}</span>@if(j.featured){<span class="pill gold">★ À la une</span>}</span><span class="job-city">{{j.city||'Mali'}}</span></div>
          <h3>{{j.title}}</h3><p class="job-meta">{{j.schoolName||'Établissement'}} · {{j.subject||'Matière'}} · {{j.level||'Tous niveaux'}}</p>
          <p class="bio">{{(j.description||'Une opportunité d’enseignement au sein d’un établissement partenaire Profa.') | slice:0:150}}</p>
          <div class="card-bottom"><div><small>Rémunération</small><strong>@if(j.salaryMin||j.salaryMax){<span>{{j.salaryMin||0 | number}} – {{j.salaryMax||0 | number}} FCFA</span>}@else{<span>À négocier</span>}</strong></div><button class="btn small" (click)="open(j)">Consulter</button></div>

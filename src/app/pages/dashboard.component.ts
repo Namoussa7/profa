@@ -45,6 +45,40 @@ import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list
      <div class="profile-progress"><strong>{{completion}}%</strong><div><div class="progress"><span [style.width.%]="completion"></span></div><small>Profil complété</small></div>@if(completion<100){<a class="btn small" routerLink="/profil">Compléter</a>}</div></div>
    }
 
+   @if(role==='TEACHER'&&earnings){
+   <article class="card block earnings">
+     <div class="section-row"><div><h3><span class="h-ic"><app-icon name="wallet" [size]="18"/></span>Mes revenus</h3>
+       <small>@if(earnings.monetizationEnabled){<span>Commission Profa : <b>{{earnings.commissionRate}} %</b> sur les cours payés en ligne · {{earnings.loyaltyRate}} % au-delà de {{earnings.loyaltyHours}} h de cours ({{earnings.completedHours|number:'1.0-1'}} h actuellement)</span>}@else{<span>Phase de lancement : <b>aucune commission</b> sur vos cours.</span>}</small></div>
+       <a class="text-link" routerLink="/tarifs">Voir les tarifs</a></div>
+     <div class="earn-kpis">
+       <div><small>À recevoir</small><strong>{{earnings.pendingBalance|number}} FCFA</strong><span>versé par Profa (Mobile Money)</span></div>
+       <div><small>Total gagné</small><strong>{{earnings.totalEarned|number}} FCFA</strong><span>cours payés via Profa</span></div>
+       <div><small>Versements reçus</small><strong>{{earnings.payouts.length}}</strong><span>@if(earnings.payouts[0]){dernier le {{earnings.payouts[0].createdAt|date:'d MMM y'}}}@else{aucun pour l’instant}</span></div>
+     </div>
+     <p class="muted small">Les cours réglés en espèces vous sont payés directement par le parent, sans commission.</p>
+   </article>
+   }
+
+   @if(role==='SCHOOL'&&billing){
+   <article class="card block plan-card" [class.paid]="billing.plan.paid">
+     <div class="section-row"><div><h3><span class="h-ic"><app-icon name="star" [size]="18"/></span>Votre formule : {{planLabel(billing.plan.code)}}</h3>
+       <small>@if(billing.plan.paid){<span>Active jusqu’au <b>{{billing.plan.endsAt|date:'d MMM y'}}</b>@if(billing.plan.featured){<span> · vos offres sont « À la une »</span>}</span>}
+         @else if(billing.plan.code==='LAUNCH'){<span>Phase de lancement : toutes les fonctionnalités sont <b>gratuites</b>.</span>}
+         @else{<span>{{billing.openOffers}} / {{billing.plan.offerLimit}} offre(s) ouverte(s) · accès aux CV non inclus</span>}</small></div>
+       <a class="text-link" routerLink="/tarifs">Comparer les formules</a></div>
+     @if(pendingSub(); as p){
+       <div class="result-panel wait"><app-icon name="clock" [size]="22"/><div><strong>Demande {{planLabel(p.plan)}} en attente de paiement</strong>
+         <p>Envoyez <b>{{p.amount|number}} FCFA</b> en indiquant la référence <b>{{p.reference}}</b>. L’abonnement est activé dès réception par l’équipe Profa.</p>
+         <button class="text-link" (click)="cancelSub(p)">Annuler la demande</button></div></div>
+     } @else if(billing.pricing.monetizationEnabled){
+       <div class="plan-choices">
+         <button class="btn" (click)="requestPlan('STANDARD')"><app-icon name="check" [size]="16"/>Standard · {{billing.pricing.standardPrice|number}} FCFA / mois</button>
+         <button class="btn accent" (click)="requestPlan('PREMIUM')"><app-icon name="star" [size]="16"/>Premium · {{billing.pricing.premiumPrice|number}} FCFA / mois</button>
+       </div>
+     }
+   </article>
+   }
+
    <div class="stats modern-stats">
      @for(s of stats();track s.label){<div><span class="stat-icon"><app-icon [name]="s.icon" [size]="22"/></span><small>{{s.label}}</small><strong>{{s.value}}</strong><span>{{s.hint}}</span></div>}
    </div>
@@ -184,15 +218,26 @@ export class DashboardComponent implements OnInit{
    this.api.get<string[]>('/api/v1/favorites').subscribe({next:ids=>{this.favorites=[];ids.forEach(id=>this.api.get<any>(`/api/v1/teachers/${id}`).subscribe({next:t=>this.favorites=[...this.favorites,t],error:()=>{}}))},error:()=>{}});
   }
   if(this.role==='TEACHER'){
+   this.api.get<any>('/api/v1/billing/teacher').subscribe({next:x=>this.earnings=x,error:()=>{}});
    this.api.get<any>('/api/v1/teachers/me').subscribe({next:p=>{this.profile=p;this.computeCompletion()},error:()=>{}});
    this.api.get<any[]>('/api/v1/documents/mine').subscribe({next:x=>{this.documents=x;this.docsLoaded=true;this.computeCompletion()},error:()=>{this.docsLoaded=true}});
    this.api.get<any[]>('/api/v1/jobs/applications/mine').subscribe({next:x=>this.applications=x,error:()=>{}});
   }
   if(this.role==='SCHOOL'){
    this.api.get<any>('/api/v1/schools/me').subscribe({next:p=>{this.profile=p;this.computeCompletion()},error:()=>{}});
+   this.loadBilling();
    this.api.get<any[]>('/api/v1/jobs/mine').subscribe({next:x=>this.jobs=x,error:e=>this.ko(e)});
   }
  }
+ earnings:any=null;billing:any=null;
+ loadBilling(){this.api.get<any>('/api/v1/billing/school').subscribe({next:x=>this.billing=x,error:()=>{}})}
+ planLabel(c:string){return ({LAUNCH:'Lancement (gratuit)',FREE:'Gratuite',STANDARD:'Standard',PREMIUM:'Premium'} as any)[c]||c}
+ pendingSub(){return this.billing?.history?.find((h:any)=>h.status==='PENDING')}
+ requestPlan(plan:string){
+  if(!confirm(`Demander la formule ${this.planLabel(plan)} ? Vous recevrez une référence de paiement.`))return;
+  this.api.post<any>('/api/v1/billing/school/subscriptions',{plan,method:'ORANGE_MONEY'}).subscribe({next:()=>{this.ok('Demande enregistrée : effectuez le paiement avec la référence indiquée.');this.loadBilling()},error:e=>this.ko(e)});
+ }
+ cancelSub(p:any){this.api.delete(`/api/v1/billing/school/subscriptions/${p.id}`).subscribe({next:()=>this.loadBilling(),error:e=>this.ko(e)})}
  computeCompletion(){
   const p=this.profile||{};
   const checks=this.role==='TEACHER'

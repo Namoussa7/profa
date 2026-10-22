@@ -63,7 +63,7 @@ import {API_BASE_URL} from './core/config/api.config';
  <main id="main"><router-outlet/></main>
  <footer>
    <div><a routerLink="/" class="footer-brand" aria-label="Profa, accueil"><app-logo [size]="36" [light]="true"/></a><p>La plateforme qui connecte les talents de l'éducation au Mali et en Afrique.</p></div>
-   <div class="footer-links"><a routerLink="/enseignants">Trouver un enseignant</a>@if(showJobs()){<a routerLink="/emplois">Offres d'emploi</a>}<a routerLink="/comment-ca-marche">Comment ça marche</a><a routerLink="/inscription">Devenir enseignant</a></div>
+   <div class="footer-links"><a routerLink="/enseignants">Trouver un enseignant</a>@if(showJobs()){<a routerLink="/emplois">Offres d'emploi</a>}<a routerLink="/comment-ca-marche">Comment ça marche</a><a routerLink="/tarifs">Tarifs</a><a routerLink="/inscription">Devenir enseignant</a></div>
    <span>© 2026 Profa</span>
  </footer>
  <nav class="bottom-nav" aria-label="Navigation mobile">

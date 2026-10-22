@@ -1,5 +1,6 @@
 package com.profa.job;
 
+import com.profa.billing.BillingService;
 import com.profa.notification.NotificationService;
 import com.profa.school.SchoolProfile;
 import com.profa.school.SchoolRepository;
@@ -27,10 +28,11 @@ public class JobController {
     final TeacherRepository teachers;
     final NotificationService notifications;
     final UserNames names;
+    final BillingService billing;
 
     public JobController(JobRepository j, ApplicationRepository a, SchoolRepository s, TeacherRepository t,
-                         NotificationService n, UserNames names) {
-        jobs = j; apps = a; schools = s; teachers = t; notifications = n; this.names = names;
+                         NotificationService n, UserNames names, BillingService billing) {
+        jobs = j; apps = a; schools = s; teachers = t; notifications = n; this.names = names; this.billing = billing;
     }
 
     private JobOffer withSchool(JobOffer j) {
@@ -51,12 +53,16 @@ public class JobController {
                                @RequestParam(required = false) String city,
                                @RequestParam(required = false) String subject,
                                @RequestParam(required = false) String contractType) {
+        Set<UUID> featured = billing.featuredSchools();
         return jobs.findByStatusOrderByCreatedAtDesc("OPEN").stream()
                 .filter(j -> matches(j.getCity(), city))
                 .filter(j -> matches(j.getSubject(), subject))
                 .filter(j -> matches(j.getContractType(), contractType))
                 .filter(j -> q == null || q.isBlank() || matches(j.getTitle(), q) || matches(j.getDescription(), q) || matches(j.getSubject(), q))
                 .map(this::withSchool)
+                .peek(j -> j.setFeatured(featured.contains(j.getSchoolId())))
+                // Premium schools first, then most recent (list already ordered by date).
+                .sorted(Comparator.comparing((JobOffer j) -> Boolean.TRUE.equals(j.getFeatured())).reversed())
                 .toList();
     }
 
@@ -78,6 +84,7 @@ public class JobController {
     @PreAuthorize("hasRole('SCHOOL')")
     public JobOffer create(Authentication a, @RequestBody JobOffer in) {
         if (in.getTitle() == null || in.getTitle().isBlank()) throw CurrentUser.badRequest("Titre requis");
+        billing.checkCanOpenOffer(CurrentUser.id(a));
         if (in.getSalaryMin() != null && in.getSalaryMax() != null && in.getSalaryMin() > in.getSalaryMax())
             throw CurrentUser.badRequest("Le salaire minimum dépasse le maximum");
         JobOffer x = new JobOffer();
@@ -100,6 +107,7 @@ public class JobController {
         if (!CurrentUser.isAdmin(a) && !CurrentUser.id(a).equals(j.getSchoolId())) throw CurrentUser.forbidden();
         String next = value.toUpperCase(Locale.ROOT);
         if (!Set.of("OPEN", "CLOSED").contains(next)) throw CurrentUser.badRequest("Statut invalide");
+        if ("OPEN".equals(next) && !"OPEN".equals(j.getStatus()) && !CurrentUser.isAdmin(a)) billing.checkCanOpenOffer(j.getSchoolId());
         j.setStatus(next);
         return jobs.save(j);
     }

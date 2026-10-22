@@ -94,3 +94,12 @@ Interface retenue : **un modèle hybride Preply + Superprof** (recherche matièr
 - Statistiques admin par requêtes `COUNT`, listes admin paginées, compression gzip, cache HTTP 30 s sur la recherche publique, pool de connexions configuré, envoi d'e-mails asynchrone.
 - Frontend : pages chargées à la demande puis préchargées, build de production avec empreintes de fichiers (cache navigateur), recherche pendant la frappe, polices préchargées, bandeau « démarrage du serveur » pendant le réveil de l'instance gratuite.
 - Limite principale restante : l'instance **gratuite** de Render (mise en veille, 512 Mo). Pour un très grand nombre d'utilisateurs : instance payante (≥ Standard) + plusieurs instances, PostgreSQL payant, et déplacement des PDF vers un stockage objet (S3/R2) si le volume devient important.
+
+## 7. Version 2.3 — rémunération de la plateforme
+- **Réglages modifiables par l'admin** (onglet Administration → Revenus) : monétisation activée/désactivée, commission (15 % par défaut), commission fidélité (10 % après 100 h de cours), prix Standard (25 000 FCFA/mois) et Premium (50 000 FCFA/mois), nombre d'offres de la formule gratuite (1).
+- **Phase de lancement** : la monétisation est **désactivée par défaut** (migration V4) — tout reste gratuit tant que l'admin ne l'active pas.
+- **Écoles** : formule Gratuite (1 offre ouverte, pas d'accès aux CV), Standard (offres illimitées + CV), Premium (Standard + offres « À la une » affichées en premier). La demande génère une référence de paiement ; l'admin active l'abonnement (30 jours) à réception du Mobile Money.
+- **Commission** : calculée et figée à la confirmation d'un paiement en ligne (part Profa / part enseignant). Aucune commission sur les cours payés en espèces.
+- **Versements** : l'admin voit le solde dû à chaque enseignant et enregistre le versement (méthode + référence) ; l'enseignant est notifié et suit ses revenus dans son espace.
+- **Page publique /tarifs** présentant les formules et la commission.
+- À brancher plus tard : paiement automatique des abonnements et des versements via un agrégateur (CinetPay, PayDunya…).

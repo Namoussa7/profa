@@ -7,7 +7,7 @@ import {AuthService} from '../../core/auth/auth.service';
 import {IconComponent} from '../../core/icon.component';
 import {DOC_TYPES,ROLES,STATUS,label,statusClass} from '../../core/labels';
 
-type Tab='overview'|'users'|'teachers'|'documents'|'schools'|'jobs'|'bookings'|'payments'|'reviews'|'audit';
+type Tab='overview'|'billing'|'users'|'teachers'|'documents'|'schools'|'jobs'|'bookings'|'payments'|'reviews'|'audit';
 interface TabState{items:any[];page:number;totalPages:number;total:number;loading:boolean}
 
 const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/v1/admin/teachers',documents:'/api/v1/admin/documents',
@@ -65,8 +65,63 @@ const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/
    </div>
    }
 
+   <!-- ============ REVENUE ============ -->
+   @if(tab==='billing'&&bill.settings){
+   <div class="billing-kpis">
+     <div class="card"><small>Commissions ce mois</small><strong>{{bill.overview?.commissionsThisMonth|number}} FCFA</strong><span>sur {{bill.overview?.volumeThisMonth|number}} FCFA de cours payés</span></div>
+     <div class="card"><small>Abonnements écoles</small><strong>{{bill.overview?.subscriptionsMonthly|number}} FCFA</strong><span>par mois · @for(e of planEntries();track e[0]){<span>{{e[1]}} {{e[0]}} </span>}@empty{<span>aucun actif</span>}</span></div>
+     <div class="card"><small>À verser aux enseignants</small><strong>{{bill.overview?.teacherBalances|number}} FCFA</strong><span>{{bill.balances.length}} enseignant(s)</span></div>
+     <div class="card"><small>Commissions totales</small><strong>{{bill.overview?.commissionsTotal|number}} FCFA</strong><span>depuis le lancement</span></div>
+   </div>
+
+   <div class="admin-grid">
+     <article class="card">
+       <div class="section-row"><h3><span class="h-ic"><app-icon name="chart" [size]="18"/></span>Règles de rémunération</h3></div>
+       <form class="stack" (ngSubmit)="saveSettings()">
+         <label class="check switch"><input type="checkbox" name="mon" [(ngModel)]="bill.form.monetizationEnabled"> <span><b>Monétisation active</b><br><small class="muted">Désactivée = phase de lancement : tout est gratuit, aucune commission ni limite.</small></span></label>
+         <div class="two"><label>Commission (%)<input type="number" min="0" max="50" name="cr" [(ngModel)]="bill.form.commissionRate"></label><label>Commission fidélité (%)<input type="number" min="0" max="50" name="lr" [(ngModel)]="bill.form.loyaltyRate"></label></div>
+         <div class="two"><label>Heures pour la fidélité<input type="number" min="0" name="lh" [(ngModel)]="bill.form.loyaltyHours"></label><label>Offres gratuites (écoles)<input type="number" min="0" name="fl" [(ngModel)]="bill.form.freeOfferLimit"></label></div>
+         <div class="two"><label>Standard (FCFA/mois)<input type="number" min="0" step="1000" name="sp" [(ngModel)]="bill.form.standardPrice"></label><label>Premium (FCFA/mois)<input type="number" min="0" step="1000" name="pp" [(ngModel)]="bill.form.premiumPrice"></label></div>
+         <button class="btn" [disabled]="busy">Enregistrer les règles</button>
+       </form>
+     </article>
+     <article class="card">
+       <div class="section-row"><h3><span class="h-ic"><app-icon name="school" [size]="18"/></span>Abonnements à valider</h3><small>{{bill.pending.length}} en attente</small></div>
+       @for(s of bill.pending;track s.id){
+         <div class="row-item compact"><div class="row-main"><strong>{{s.schoolName}} — {{s.plan}}</strong><small>{{s.amount|number}} FCFA · réf. <b>{{s.reference}}</b> · {{s.createdAt|date:'d MMM, HH:mm'}}</small></div>
+           <div class="row-actions"><button class="btn small" (click)="subAction(s,'activate')">Paiement reçu</button><button class="btn small danger" (click)="subAction(s,'cancel')">Annuler</button></div></div>
+       } @empty {<p class="empty-inline">Aucune demande en attente.</p>}
+       @if(bill.active.length){<h3 class="sub-title">Actifs</h3>}
+       @for(s of bill.active;track s.id){
+         <div class="row-item compact"><div class="row-main"><strong>{{s.schoolName}} — {{s.plan}}</strong><small>jusqu’au {{s.endsAt|date:'d MMM y'}}</small></div><span class="status ok">Actif</span></div>
+       }
+     </article>
+   </div>
+
+   <article class="card block">
+     <div class="section-row"><h3><span class="h-ic"><app-icon name="wallet" [size]="18"/></span>Versements aux enseignants</h3><small>Part enseignant des cours payés en ligne</small></div>
+     @for(b of bill.balances;track b.teacherId){
+       <div class="row-item"><div class="row-main"><strong>{{b.teacherName}}</strong><small>{{b.payments}} paiement(s) en attente de versement</small></div>
+         <div class="row-tags"><b>{{b.amount|number}} FCFA</b></div>
+         <div class="row-actions"><button class="btn small" (click)="openPayout(b)">Marquer comme versé</button></div>
+         @if(payoutFor===b.teacherId){
+           <form class="inline-form" (ngSubmit)="doPayout(b)">
+             <select name="pm" [(ngModel)]="payoutForm.method"><option value="ORANGE_MONEY">Orange Money</option><option value="MOOV_MONEY">Moov Money</option><option value="WAVE">Wave</option><option value="VIREMENT">Virement</option></select>
+             <input name="pr" [(ngModel)]="payoutForm.reference" placeholder="Référence de la transaction">
+             <button class="btn small">Confirmer {{b.amount|number}} FCFA</button><button type="button" class="text-link" (click)="payoutFor=null">Annuler</button>
+           </form>
+         }
+       </div>
+     } @empty {<p class="empty-inline">Rien à verser pour le moment.</p>}
+     @if(bill.payouts.length){<h3 class="sub-title">Derniers versements</h3>}
+     @for(p of bill.payouts;track p.id){
+       <div class="row-item compact"><div class="row-main"><strong>{{p.teacherName}}</strong><small>{{p.method||'—'}} · réf. {{p.reference||'—'}} · {{p.createdAt|date:'d MMM y, HH:mm'}}</small></div><b>{{p.amount|number}} FCFA</b></div>
+     }
+   </article>
+   }
+
    <!-- ============ LIST TABS ============ -->
-   @if(tab!=='overview'){
+   @if(tab!=='overview'&&tab!=='billing'){
    <div class="card admin-table-card">
      <div class="section-row">
        <div><h3>{{tabLabel()}}</h3><small>{{state().total|number}} élément(s)</small></div>
@@ -261,7 +316,7 @@ export class AdminDashboardComponent implements OnInit{
  DOC_TYPES=DOC_TYPES;ROLES=ROLES;STATUS=STATUS;L=label;sc=statusClass;roleKeys=Object.keys(ROLES);
  meId=this.auth.userId();
  tabs:{id:Tab;label:string;icon:string}[]=[
-  {id:'overview',label:'Vue générale',icon:'grid'},{id:'users',label:'Utilisateurs',icon:'users'},{id:'teachers',label:'Enseignants',icon:'cap'},
+  {id:'overview',label:'Vue générale',icon:'grid'},{id:'billing',label:'Revenus',icon:'wallet'},{id:'users',label:'Utilisateurs',icon:'users'},{id:'teachers',label:'Enseignants',icon:'cap'},
   {id:'documents',label:'Documents',icon:'file'},{id:'schools',label:'Écoles',icon:'school'},{id:'jobs',label:'Offres',icon:'briefcase'},
   {id:'bookings',label:'Réservations',icon:'calendar'},{id:'payments',label:'Paiements',icon:'wallet'},{id:'reviews',label:'Avis',icon:'star'},
   {id:'audit',label:'Journal',icon:'clock'}];
@@ -276,7 +331,7 @@ export class AdminDashboardComponent implements OnInit{
  ngOnInit(){this.loadStats()}
  state():TabState{return this.states[this.tab]||(this.states[this.tab]={items:[],page:0,totalPages:0,total:0,loading:false})}
  tabLabel(){return this.tabs.find(t=>t.id===this.tab)?.label||''}
- go(t:Tab){this.tab=t;this.error='';if(t==='overview')this.loadStats();else this.load(0)}
+ go(t:Tab){this.tab=t;this.error='';if(t==='overview')this.loadStats();else if(t==='billing')this.loadBilling();else this.load(0)}
  reload(){this.load(0)}
  goPage(p:number){this.load(p);window.scrollTo({top:0,behavior:'smooth'})}
  typed(){clearTimeout(this.debounce);this.debounce=setTimeout(()=>this.load(0),350)}
@@ -359,6 +414,31 @@ export class AdminDashboardComponent implements OnInit{
  doReject(){this.review(this.target,'REJECTED',this.reason.trim())}
  openTeacherDocs(t:any){this.target=t;this.teacherDocs=[];this.modalError='';this.modal='teacherDocs';this.loadTeacherDocs()}
  loadTeacherDocs(){this.api.get<any[]>(`/api/v1/documents/teacher/${this.target.userId}`).subscribe({next:x=>this.teacherDocs=x,error:e=>this.modalError=errorMessage(e)})}
+
+ // revenue
+ bill:any={settings:null,form:{},overview:null,pending:[],active:[],balances:[],payouts:[]};payoutFor:string|null=null;payoutForm:any={};
+ planEntries(){return Object.entries(this.bill.overview?.activePlans||{})}
+ loadBilling(){
+  this.api.get<any>('/api/v1/admin/billing/settings').subscribe({next:x=>{this.bill.settings=x;this.bill.form={...x}},error:e=>this.error=errorMessage(e)});
+  this.api.get<any>('/api/v1/admin/billing/overview').subscribe({next:x=>this.bill.overview=x,error:()=>{}});
+  this.api.get<Page<any>>('/api/v1/admin/billing/subscriptions',{status:'PENDING',size:50}).subscribe({next:x=>this.bill.pending=x.content,error:()=>{}});
+  this.api.get<Page<any>>('/api/v1/admin/billing/subscriptions',{status:'ACTIVE',size:50}).subscribe({next:x=>this.bill.active=x.content.filter((s:any)=>s.activeNow),error:()=>{}});
+  this.api.get<any[]>('/api/v1/admin/billing/balances').subscribe({next:x=>this.bill.balances=x,error:()=>{}});
+  this.api.get<Page<any>>('/api/v1/admin/billing/payouts',{size:10}).subscribe({next:x=>this.bill.payouts=x.content,error:()=>{}});
+ }
+ saveSettings(){
+  if(this.bill.form.monetizationEnabled&&!this.bill.settings.monetizationEnabled&&!confirm("Activer la monétisation ? Les commissions et les limites de la formule gratuite s'appliqueront immédiatement."))return;
+  this.busy=true;
+  this.api.put<any>('/api/v1/admin/billing/settings',this.bill.form).subscribe({next:x=>{this.busy=false;this.bill.settings=x;this.bill.form={...x};this.ok('Règles de rémunération enregistrées.');this.loadBilling()},error:e=>{this.busy=false;this.error=errorMessage(e)}});
+ }
+ subAction(s:any,action:string){
+  if(action==='activate'&&!confirm(`Confirmer la réception de ${s.amount} FCFA (réf. ${s.reference}) ? L'abonnement sera actif 30 jours.`))return;
+  this.api.patch(`/api/v1/admin/billing/subscriptions/${s.id}`,{},{action}).subscribe({next:()=>{this.ok(action==='activate'?'Abonnement activé.':'Demande annulée.');this.loadBilling()},error:e=>this.error=errorMessage(e)});
+ }
+ openPayout(b:any){this.payoutFor=b.teacherId;this.payoutForm={method:'ORANGE_MONEY',reference:''}}
+ doPayout(b:any){
+  this.api.post('/api/v1/admin/billing/payouts',{teacherId:b.teacherId,...this.payoutForm}).subscribe({next:()=>{this.payoutFor=null;this.ok("Versement enregistré : l'enseignant est notifié.");this.loadBilling()},error:e=>this.error=errorMessage(e)});
+ }
 
  // misc
  closeModal(){

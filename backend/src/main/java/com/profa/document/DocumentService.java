@@ -1,5 +1,6 @@
 package com.profa.document;
 
+import com.profa.billing.BillingService;
 import com.profa.job.ApplicationRepository;
 import com.profa.notification.NotificationService;
 import com.profa.security.CurrentUser;
@@ -32,12 +33,13 @@ public class DocumentService {
     private final ApplicationRepository applications;
     private final NotificationService notifications;
     private final UserNames names;
+    private final BillingService billing;
 
     public DocumentService(TeacherDocumentRepository docs, DocumentFileRepository files, TeacherRepository teachers,
                            UserRepository users, ApplicationRepository applications, NotificationService notifications,
-                           UserNames names) {
+                           UserNames names, BillingService billing) {
         this.docs = docs; this.files = files; this.teachers = teachers; this.users = users;
-        this.applications = applications; this.notifications = notifications; this.names = names;
+        this.applications = applications; this.notifications = notifications; this.names = names; this.billing = billing;
     }
 
     /** Uploads (or replaces) the teacher's PDF of the given type; it goes back to PENDING review. */
@@ -131,7 +133,11 @@ public class DocumentService {
         if (CurrentUser.isAdmin(a)) return true;
         UUID me = CurrentUser.id(a);
         if (me.equals(d.getTeacherId())) return true;
-        return CurrentUser.hasRole(a, "SCHOOL") && applications.teacherAppliedToSchool(d.getTeacherId(), me);
+        if (!CurrentUser.hasRole(a, "SCHOOL") || !applications.teacherAppliedToSchool(d.getTeacherId(), me)) return false;
+        if (!billing.canReadCvs(me))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.PAYMENT_REQUIRED,
+                    "L'accès aux CV des candidats est inclus dans les formules Standard et Premium.");
+        return true;
     }
 
     public byte[] content(UUID documentId) {

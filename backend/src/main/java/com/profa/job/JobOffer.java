@@ -23,6 +23,8 @@ public class JobOffer {
     Instant createdAt = Instant.now();
     @Transient String schoolName;
     @Transient Long applicationsCount;
+    /** Offer of a Premium school: shown first with an « À la une » badge. */
+    @Transient Boolean featured;
 
     public UUID getId(){return id;}
     public UUID getSchoolId(){return schoolId;} public void setSchoolId(UUID v){schoolId=v;}
@@ -37,5 +39,6 @@ public class JobOffer {
     public String getStatus(){return status;} public void setStatus(String v){status=v;}
     public Instant getCreatedAt(){return createdAt;}
     public String getSchoolName(){return schoolName;} public void setSchoolName(String v){schoolName=v;}
+    public Boolean getFeatured(){return featured;} public void setFeatured(Boolean v){featured=v;}
     public Long getApplicationsCount(){return applicationsCount;} public void setApplicationsCount(Long v){applicationsCount=v;}
 }

@@ -1,5 +1,6 @@
 package com.profa.payment;
 
+import com.profa.billing.BillingService;
 import com.profa.booking.Booking;
 import com.profa.booking.BookingRepository;
 import com.profa.notification.NotificationService;
@@ -15,9 +16,10 @@ public class PaymentService {
     private final PaymentRepository payments;
     private final BookingRepository bookings;
     private final NotificationService notifications;
+    private final BillingService billing;
 
-    public PaymentService(PaymentRepository p, BookingRepository b, NotificationService n) {
-        payments = p; bookings = b; notifications = n;
+    public PaymentService(PaymentRepository p, BookingRepository b, NotificationService n, BillingService billing) {
+        payments = p; bookings = b; notifications = n; this.billing = billing;
     }
 
     @Transactional
@@ -30,22 +32,22 @@ public class PaymentService {
         };
         if ("CONFIRMED".equals(p.getStatus()) && "PENDING".equals(status)) return p; // never downgrade
         p.setStatus(status);
+        Booking b = p.getBookingId() == null ? null : bookings.findById(p.getBookingId()).orElse(null);
+        // Platform commission / teacher share, frozen once at confirmation.
+        if ("CONFIRMED".equals(status)) billing.applySplit(p, b);
         Payment saved = payments.save(p);
-        if (p.getBookingId() != null) {
-            Booking b = bookings.findById(p.getBookingId()).orElse(null);
-            if (b != null) {
-                if ("CONFIRMED".equals(status)) {
-                    b.setPaymentStatus("PAID");
-                    if ("PENDING_PAYMENT".equals(b.getStatus())) b.setStatus("CONFIRMED");
-                    notifications.notify(b.getTeacherId(), "PAYMENT", "Paiement reçu",
-                            "Le cours réservé a été payé et confirmé.", "/dashboard");
-                    notifications.notify(b.getParentId(), "PAYMENT", "Paiement confirmé",
-                            "Votre paiement a été reçu. Bon cours !", "/dashboard");
-                } else if ("REFUNDED".equals(status)) {
-                    b.setPaymentStatus("REFUNDED");
-                }
-                bookings.save(b);
+        if (b != null) {
+            if ("CONFIRMED".equals(status)) {
+                b.setPaymentStatus("PAID");
+                if ("PENDING_PAYMENT".equals(b.getStatus())) b.setStatus("CONFIRMED");
+                notifications.notify(b.getTeacherId(), "PAYMENT", "Paiement reçu",
+                        "Le cours réservé a été payé et confirmé.", "/dashboard");
+                notifications.notify(b.getParentId(), "PAYMENT", "Paiement confirmé",
+                        "Votre paiement a été reçu. Bon cours !", "/dashboard");
+            } else if ("REFUNDED".equals(status)) {
+                b.setPaymentStatus("REFUNDED");
             }
+            bookings.save(b);
         }
         return saved;
     }

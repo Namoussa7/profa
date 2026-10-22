@@ -581,3 +581,30 @@ footer>span{color:#7f8bb3;font-size:13px}
 }
 .jobs-locked{display:flex;gap:16px;align-items:flex-start;padding:28px}
 .jobs-locked h3{margin-top:4px}
+
+
+/* ---------- V2.3 : rémunération ---------- */
+.earn-kpis,.billing-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 10px}
+.billing-kpis{grid-template-columns:repeat(4,1fr);margin:0 0 20px}
+.earn-kpis>div{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.earn-kpis small,.billing-kpis small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.earn-kpis strong,.billing-kpis strong{display:block;font-size:22px;font-weight:800;margin:4px 0}
+.earn-kpis span,.billing-kpis span{color:var(--faint);font-size:12px}
+.plan-card.paid{border-color:#ffd38a;background:linear-gradient(135deg,#fff 60%,var(--accent-50))}
+.plan-choices{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.result-panel.wait{background:var(--warn-50);color:#6b4500}
+.result-panel .text-link{margin-top:6px}
+.tag-row.tight{margin:0}
+.sub-title{font-size:14px!important;margin:16px 0 4px;color:var(--muted)}
+.switch{align-items:center!important}.switch input{width:20px!important;height:20px!important}
+.pricing-title{font-size:22px;margin:28px 0 14px}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pricing-grid.two-cols{grid-template-columns:1fr 1fr}
+.plan{position:relative;display:flex;flex-direction:column;gap:10px}
+.plan.highlight{border:2px solid var(--primary);box-shadow:var(--sh-3)}
+.plan-badge{position:absolute;top:-12px;left:20px;background:var(--primary);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
+.plan-price{font-size:30px;font-weight:800;letter-spacing:-.02em}.plan-price small{font-size:13px;font-weight:600;color:var(--muted)}
+.plan ul{list-style:none;padding:0;margin:4px 0 8px;display:grid;gap:8px;flex:1;font-size:14px;color:var(--ink-2)}
+.plan li{display:flex;gap:8px;align-items:flex-start}.plan li app-icon{color:var(--ok);margin-top:2px}
+.plan li.no{color:var(--faint)}.plan li.no app-icon{color:var(--faint)}
+@media(max-width:900px){.earn-kpis,.pricing-grid,.pricing-grid.two-cols{grid-template-columns:1fr}.billing-kpis{grid-template-columns:1fr 1fr}}
