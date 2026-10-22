@@ -44,8 +44,9 @@ public class JobController {
                 || (value != null && value.toLowerCase(Locale.ROOT).contains(filter.trim().toLowerCase(Locale.ROOT)));
     }
 
-    /** Public list of open offers with optional filters. */
+    /** Open offers with optional filters. B2B only: parents and visitors cannot see school offers. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('TEACHER','SCHOOL','ADMIN')")
     public List<JobOffer> list(@RequestParam(required = false) String q,
                                @RequestParam(required = false) String city,
                                @RequestParam(required = false) String subject,
@@ -60,6 +61,7 @@ public class JobController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('TEACHER','SCHOOL','ADMIN')")
     public JobOffer one(@PathVariable UUID id) {
         return withSchool(jobs.findById(id).orElseThrow(() -> CurrentUser.notFound("Offre")));
     }

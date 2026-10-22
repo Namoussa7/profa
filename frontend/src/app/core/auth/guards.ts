@@ -18,3 +18,9 @@ export const guestGuard:CanActivateFn=()=>{
  const auth=inject(AuthService);
  return auth.isLogged()?inject(Router).createUrlTree([auth.home()]):true;
 };
+
+/** Job offers are B2B: parents are sent back to their space. Visitors see an invitation to sign in. */
+export const notParentGuard:CanActivateFn=()=>{
+ const auth=inject(AuthService);
+ return auth.isLogged()&&auth.role()==='PARENT'?inject(Router).createUrlTree(['/dashboard']):true;
+};

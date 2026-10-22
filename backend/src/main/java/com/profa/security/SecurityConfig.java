@@ -42,9 +42,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/v1/public/**", "/actuator/health", "/actuator/health/**").permitAll()
                         // Spring forwards errors to /error: without this, a 400/404/405 would be turned into a 401.
                         .requestMatchers("/error").permitAll()
-                        // Public marketplace browsing (like Superprof / Preply): teachers, reviews and job offers.
-                        .requestMatchers(HttpMethod.GET, "/api/v1/teachers", "/api/v1/teachers/*", "/api/v1/reviews/teacher/*",
-                                "/api/v1/jobs", "/api/v1/jobs/*").permitAll()
+                        // Public marketplace browsing (like Superprof / Preply): teachers and reviews.
+                        // Job offers are B2B: only teachers, schools and admins (checked in JobController).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/teachers", "/api/v1/teachers/*", "/api/v1/reviews/teacher/*").permitAll()
                         // Payment provider callbacks are authenticated by a shared secret header, not a JWT.
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook/*").permitAll()
                         // WebSocket handshake; STOMP CONNECT is authenticated in WebSocketConfig.

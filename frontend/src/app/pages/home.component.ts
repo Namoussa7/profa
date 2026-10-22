@@ -3,6 +3,7 @@ import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {Router,RouterLink} from '@angular/router';
 import {ApiService} from '../core/api.service';
+import {AuthService} from '../core/auth/auth.service';
 import {IconComponent} from '../core/icon.component';
 import {CITIES,SUBJECTS,initials,list,stars} from '../core/labels';
 
@@ -31,7 +32,7 @@ import {CITIES,SUBJECTS,initials,list,stars} from '../core/labels';
      <div class="hero-card">
        <div class="hero-card-top"><span class="mini-icon"><app-icon name="sparkle"/></span><div><small>PROFA</small><strong>Que souhaitez-vous faire ?</strong></div></div>
        <a routerLink="/enseignants"><b><app-icon name="cap"/></b><div><strong>Prendre des cours</strong><small>À domicile, chez l’enseignant ou en ligne</small></div><i><app-icon name="arrow" [size]="18"/></i></a>
-       <a routerLink="/emplois"><b><app-icon name="school"/></b><div><strong>Recruter un enseignant</strong><small>Publiez vos offres, suivez vos candidats</small></div><i><app-icon name="arrow" [size]="18"/></i></a>
+       @if(auth.role()!=='PARENT'){       <a routerLink="/emplois"><b><app-icon name="school"/></b><div><strong>Recruter un enseignant</strong><small>Publiez vos offres, suivez vos candidats</small></div><i><app-icon name="arrow" [size]="18"/></i></a>}
        <a routerLink="/inscription" [queryParams]="{role:'TEACHER'}"><b><app-icon name="users"/></b><div><strong>Devenir enseignant</strong><small>Fixez vos tarifs, trouvez des élèves</small></div><i><app-icon name="arrow" [size]="18"/></i></a>
      </div>
      <div class="floating-card"><span><app-icon name="shield"/></span><div><strong>Profils contrôlés</strong><small>Documents vérifiés par Profa</small></div></div>
@@ -78,7 +79,7 @@ import {CITIES,SUBJECTS,initials,list,stars} from '../core/labels';
  <section class="home-cta"><div><div class="eyebrow">Vous êtes une école ?</div><h2>Publiez vos offres et suivez<br>vos candidatures en un clic.</h2></div><a routerLink="/inscription" [queryParams]="{role:'SCHOOL'}" class="btn light big">Créer un compte école <app-icon name="arrow" [size]="18"/></a></section>`
 })
 export class HomeComponent implements OnInit{
- api=inject(ApiService);router=inject(Router);
+ api=inject(ApiService);router=inject(Router);auth=inject(AuthService);
  SUBJECTS=SUBJECTS;CITIES=CITIES;stars=stars;
  popular=['Mathématiques','Français','Anglais','Physique-Chimie','Préparation BAC'];
  tiles=[

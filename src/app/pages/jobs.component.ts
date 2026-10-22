@@ -14,9 +14,10 @@ import {CITIES,CONTRACTS,LEVELS,SUBJECTS} from '../core/labels';
  <section class="page">
    <div class="page-hero">
      <div><div class="eyebrow">CARRIÈRE B2B</div><h1>Les opportunités commencent ici.</h1><p>Découvrez les besoins des établissements et construisez votre prochaine étape professionnelle.</p></div>
-     <div class="result-badge"><app-icon name="briefcase" [size]="16"/> <strong>{{jobs.length}}</strong> offre(s)</div>
+     @if(auth.isLogged()){<div class="result-badge"><app-icon name="briefcase" [size]="16"/> <strong>{{jobs.length}}</strong> offre(s)</div>}
    </div>
    <div class="jobs-banner"><div><span><app-icon name="school" [size]="22"/></span><div><strong>Vous êtes une école ?</strong><small>Publiez vos besoins et recevez des candidatures structurées.</small></div></div><button class="btn ghost" (click)="startPublish()">Publier une offre</button></div>
+   @if(auth.isLogged()){
    <form class="search-panel jobs-search" (ngSubmit)="load()" role="search">
      <label class="field"><app-icon name="search" [size]="18"/><input name="q" [(ngModel)]="f.q" placeholder="Mot-clé, poste…" aria-label="Mot-clé"></label>
      <label class="field"><app-icon name="book" [size]="18"/><input name="subject" [(ngModel)]="f.subject" list="j-subjects" placeholder="Matière" aria-label="Matière"></label>
@@ -37,6 +38,13 @@ import {CITIES,CONTRACTS,LEVELS,SUBJECTS} from '../core/labels';
        </article>
      } @empty { <div class="empty"><span><app-icon name="briefcase" [size]="28"/></span><h3>Aucune offre ouverte</h3><p>Les nouvelles opportunités apparaîtront ici.</p></div> }
    </div>
+   } @else {
+   <div class="card jobs-locked">
+     <span class="h-ic"><app-icon name="lock" [size]="20"/></span>
+     <div><h3>Espace réservé aux enseignants et aux écoles</h3><p class="muted">Les offres d’emploi des établissements sont visibles uniquement par les enseignants et les écoles inscrits sur Profa.</p>
+       <div class="dash-actions"><a class="btn" routerLink="/connexion" [queryParams]="{next:'/emplois'}">Se connecter</a><a class="btn ghost" routerLink="/inscription" [queryParams]="{role:'TEACHER'}">Je suis enseignant</a><a class="btn ghost" routerLink="/inscription" [queryParams]="{role:'SCHOOL'}">Je suis une école</a></div></div>
+   </div>
+   }
  </section>
 
  @if(selected){
@@ -89,7 +97,7 @@ export class JobsComponent implements OnInit{
  selected:any=null;cover='';applied=false;busy=false;modalError='';
  publishing=false;job:any={contractType:'CDI'};
 
- ngOnInit(){this.load()}
+ ngOnInit(){if(this.auth.isLogged())this.load()}
  load(){this.api.get<any[]>('/api/v1/jobs',this.f).subscribe({next:x=>this.jobs=x,error:()=>this.error='Impossible de charger les offres.'})}
  open(j:any){this.selected=j;this.cover='';this.applied=false;this.modalError=''}
  close(){this.selected=null}

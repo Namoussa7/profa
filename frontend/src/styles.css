@@ -579,3 +579,5 @@ footer>span{color:#7f8bb3;font-size:13px}
  .admin-row .row-actions{justify-content:flex-start}
  .admin-filters{width:100%}.admin-filters select,.admin-filters input{flex:1}
 }
+.jobs-locked{display:flex;gap:16px;align-items:flex-start;padding:28px}
+.jobs-locked h3{margin-top:4px}
