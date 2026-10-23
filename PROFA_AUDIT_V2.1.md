@@ -111,3 +111,13 @@ Interface retenue : **un modèle hybride Preply + Superprof** (recherche matièr
 - **Contrôle qualité** : suspension automatique sous un seuil de note (3,5/5 après 5 avis par défaut), signalements des parents/écoles (motif « sécurité » marqué urgent), réactivation par l'admin.
 - **Administration → Certification** : import de questions depuis Excel (CSV point-virgule, modèle téléchargeable), éditeur de questions, validation des vidéos, signalements, suspensions et règles (nombre de questions, durée, note, tentatives, délai, seuils).
 - **Test obligatoire pour apparaître dans la recherche** : désactivé par défaut tant que la banque de questions n'est pas remplie ; à activer dans l'onglet Certification.
+
+## 9. Version 2.5 — performance et affichage sur tous les appareils
+- **Cause principale de la lenteur** : le backend Render gratuit s'endort après 15 minutes sans visite ; le réveil prend 1 à 3 minutes (bandeau « Démarrage du serveur Profa… »). Seule une instance payante (Starter) supprime totalement ce délai.
+- **Démarrage plus rapide** : image Docker avec archive CDS (classes Java préchargées) et réglages JVM adaptés aux petites instances.
+- **Serveur maintenu éveillé** : workflow GitHub Actions `keep-awake` qui appelle `/actuator/health` toutes les 10 minutes (compatible avec les 750 h gratuites/mois de Render pour un seul service).
+- **Base de données** : filtrage des offres d'emploi fait en SQL (plus en mémoire), compteur de messages non lus en une seule requête, liste des conversations limitée aux 50 plus récentes, réglages de la plateforme gardés en cache 30 s.
+- **Application installable (PWA)** : service worker Angular qui met en cache l'application et les polices ; les écrans s'affichent immédiatement à la visite suivante, même pendant le réveil du serveur. Les appels API ne passent jamais par ce cache (données toujours à jour).
+- **Moins de trafic inutile** : les rafraîchissements automatiques (notifications, messages) s'arrêtent quand l'onglet est en arrière-plan et reprennent au retour.
+- **Responsive vérifié** à 320 px (petits téléphones), 360 px, 768 px (tablette) et 1920 px (grand écran), pour les visiteurs, parents, enseignants, écoles et l'administration (12 onglets) : aucun débordement horizontal. Corrections : bandeaux d'information et carte « Profil complété » du tableau de bord.
+- **Pour des millions d'utilisateurs** : passer le backend et PostgreSQL sur des offres payantes (la base gratuite Render est limitée à 1 Go et expire après 30 jours), puis ajouter des instances backend derrière l'équilibreur de Render ; l'application est déjà sans état (JWT), paginée et indexée pour cela.

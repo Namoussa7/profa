@@ -55,7 +55,7 @@ export class MessagesComponent implements OnInit,OnDestroy{
  ngOnInit(){
   this.route.paramMap.subscribe(p=>{this.activeId=p.get('id');this.messages=[];this.loadConversations();this.loadMessages()});
   // Polling keeps the thread fresh without extra client libraries (the backend also exposes STOMP on /ws).
-  this.timer=setInterval(()=>{this.loadConversations();this.loadMessages(true)},5000);
+  this.timer=setInterval(()=>{if(document.hidden)return;this.loadConversations();this.loadMessages(true)},6000);
  }
  ngOnDestroy(){clearInterval(this.timer)}
  ini(n:string){const [a,b]=(n||'').split(' ');return initials(a,b)}

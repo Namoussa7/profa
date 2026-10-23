@@ -41,6 +41,10 @@ public class JobController {
         return j;
     }
 
+    private static String like(String v) {
+        return v == null || v.isBlank() ? "" : "%" + v.trim().toLowerCase(Locale.ROOT) + "%";
+    }
+
     private static boolean matches(String value, String filter) {
         return filter == null || filter.isBlank()
                 || (value != null && value.toLowerCase(Locale.ROOT).contains(filter.trim().toLowerCase(Locale.ROOT)));
@@ -54,11 +58,8 @@ public class JobController {
                                @RequestParam(required = false) String subject,
                                @RequestParam(required = false) String contractType) {
         Set<UUID> featured = billing.featuredSchools();
-        return jobs.findByStatusOrderByCreatedAtDesc("OPEN").stream()
-                .filter(j -> matches(j.getCity(), city))
-                .filter(j -> matches(j.getSubject(), subject))
-                .filter(j -> matches(j.getContractType(), contractType))
-                .filter(j -> q == null || q.isBlank() || matches(j.getTitle(), q) || matches(j.getDescription(), q) || matches(j.getSubject(), q))
+        return jobs.searchOpen(like(q), like(city), like(subject), like(contractType),
+                        org.springframework.data.domain.PageRequest.of(0, 100)).stream()
                 .map(this::withSchool)
                 .peek(j -> j.setFeatured(featured.contains(j.getSchoolId())))
                 // Premium schools first, then most recent (list already ordered by date).

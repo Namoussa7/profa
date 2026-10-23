@@ -72,7 +72,10 @@ label{font-size:13px;font-weight:600;color:var(--ink-2)}
 .pwd{position:relative;display:block}.pwd button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;color:var(--muted);padding:8px;border-radius:8px}
 .error{color:var(--ko);font-size:13px;font-weight:600;min-height:0;margin:8px 0}
 .success{color:var(--ok);font-size:13px;font-weight:700;margin:8px 0}
-.notice{display:flex;gap:10px;align-items:center;background:var(--accent-50);border:1px solid #ffe0b0;color:#7a4b00;border-radius:var(--r);padding:12px 16px;font-size:14px;margin:0 0 18px}
+.notice{display:block;position:relative;overflow-wrap:anywhere;background:var(--accent-50);border:1px solid #ffe0b0;color:#7a4b00;border-radius:var(--r);padding:12px 16px;font-size:14px;margin:0 0 18px}
+/* Mixed text + icon: block layout so the text wraps on narrow phones; the leading icon sits in the left padding. */
+.notice:has(>app-icon:first-child){padding-left:42px}
+.notice>app-icon:first-child{position:absolute;left:14px;top:13px}
 p.success,p.error{padding:10px 14px;border-radius:12px}
 p.success{background:var(--ok-50)}p.error{background:var(--ko-50)}
 .auth-card p.error:empty,p.error:empty{display:none}
@@ -519,6 +522,8 @@ footer>span{color:#7f8bb3;font-size:13px}
  .hero h1{font-size:38px}
  .save-row{display:grid}.save-row .btn{width:100%}
  .notif-panel{position:fixed;left:12px;right:12px;width:auto;top:70px}
+ .welcome-strip{padding:18px;gap:14px}.welcome-strip>div{min-width:0}
+ .profile-progress{flex-wrap:wrap}.profile-progress .progress{width:min(150px,40vw)}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 

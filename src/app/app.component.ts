@@ -97,11 +97,14 @@ export class AppComponent implements OnInit,OnDestroy{
  ngOnInit(){
   this.wake();
   this.refresh();
-  this.timer=setInterval(()=>this.refresh(),30000);
+  this.timer=setInterval(()=>this.refresh(),60000);
+  // Refresh badges as soon as the user comes back to the tab instead of polling in the background.
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)this.refresh()});
   this.router.events.pipe(filter(e=>e instanceof NavigationEnd)).subscribe(()=>{this.notifsOpen=false;this.menuOpen=false;this.refresh()});
  }
  ngOnDestroy(){clearInterval(this.timer)}
  refresh(){
+  if(document.hidden)return;
   if(!this.auth.isLogged()){this.unreadNotifs=0;this.unreadMessages=0;return}
   this.api.get<any>('/api/v1/notifications/unread-count').subscribe({next:x=>this.unreadNotifs=x.count,error:()=>{}});
   this.api.get<any>('/api/v1/messaging/unread-count').subscribe({next:x=>this.unreadMessages=x.count,error:()=>{}});

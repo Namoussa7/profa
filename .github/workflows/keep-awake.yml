@@ -1,0 +1,17 @@
+name: Keep Profa backend awake
+
+# Render free web services sleep after 15 minutes without traffic, and waking up takes 1 to 3 minutes.
+# A light health check every 10 minutes keeps the API responsive (one always-on free service fits in
+# Render's 750 free hours per month). Remove this workflow once the backend is on a paid instance.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping health endpoint
+        run: curl -fsS --retry 3 --retry-delay 20 --max-time 120 https://profa-backend.onrender.com/actuator/health || echo "backend still waking up"

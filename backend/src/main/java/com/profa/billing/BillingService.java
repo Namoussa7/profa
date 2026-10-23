@@ -49,12 +49,25 @@ public class BillingService {
 
     // ------------------------------------------------------------------ settings
 
+    private volatile PlatformSettings cached;
+    private volatile long cachedAt;
+    private static final long SETTINGS_TTL_MS = 30_000;
+
+    /** Business rules, cached 30 s (and refreshed on every save) instead of one SQL query per request. */
     public PlatformSettings settings() {
-        return settingsRepo.findById(1).orElseGet(() -> settingsRepo.save(new PlatformSettings()));
+        PlatformSettings c = cached;
+        if (c != null && System.currentTimeMillis() - cachedAt < SETTINGS_TTL_MS) return c;
+        PlatformSettings fresh = settingsRepo.findById(1).orElseGet(() -> settingsRepo.save(new PlatformSettings()));
+        cached = fresh;
+        cachedAt = System.currentTimeMillis();
+        return fresh;
     }
 
     public PlatformSettings saveSettings(PlatformSettings s) {
-        return settingsRepo.save(s);
+        PlatformSettings saved = settingsRepo.save(s);
+        cached = saved;
+        cachedAt = System.currentTimeMillis();
+        return saved;
     }
 
     @Transactional
@@ -74,7 +87,7 @@ public class BillingService {
         s.setPremiumPrice(in.getPremiumPrice());
         s.setFreeOfferLimit(in.getFreeOfferLimit());
         s.setUpdatedAt(Instant.now());
-        return settingsRepo.save(s);
+        return saveSettings(s);
     }
 
     // ------------------------------------------------------------------ school plans

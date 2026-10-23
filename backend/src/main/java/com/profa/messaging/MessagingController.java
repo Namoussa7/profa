@@ -41,14 +41,13 @@ public class MessagingController {
     @GetMapping("/conversations")
     public List<ConversationView> conversations(Authentication a) {
         UUID me = CurrentUser.id(a);
-        return c.findByUserAOrUserBOrderByUpdatedAtDesc(me, me).stream().map(x -> view(x, me)).toList();
+        return c.findTop50ByUserAOrUserBOrderByUpdatedAtDesc(me, me).stream().map(x -> view(x, me)).toList();
     }
 
     @GetMapping("/unread-count")
     public Map<String, Long> unread(Authentication a) {
         UUID me = CurrentUser.id(a);
-        long total = c.findByUserAOrUserBOrderByUpdatedAtDesc(me, me).stream()
-                .mapToLong(x -> m.countByConversationIdAndSenderIdNotAndReadFalse(x.getId(), me)).sum();
+        long total = m.unreadFor(me);
         return Map.of("count", total);
     }
 
