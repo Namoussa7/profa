@@ -4,6 +4,7 @@ import {Component,inject,OnDestroy,OnInit} from '@angular/core';
 import {NavigationEnd,Router,RouterLink,RouterLinkActive,RouterOutlet} from '@angular/router';
 import {CommonModule} from '@angular/common';
 import {filter} from 'rxjs';
+import {SwUpdate} from '@angular/service-worker';
 import {AuthService} from './core/auth/auth.service';
 import {ApiService} from './core/api.service';
 import {API_BASE_URL} from './core/config/api.config';
@@ -97,7 +98,7 @@ import {API_BASE_URL} from './core/config/api.config';
  host:{'(document:keydown.escape)':'notifsOpen=false','(document:keydown)':'hotkey($event)','class':'shell'}
 })
 export class AppComponent implements OnInit,OnDestroy{
- auth=inject(AuthService);api=inject(ApiService);router=inject(Router);
+ auth=inject(AuthService);api=inject(ApiService);router=inject(Router);sw=inject(SwUpdate);
  menuOpen=false;notifsOpen=false;notifs:any[]=[];unreadNotifs=0;unreadMessages=0;
  private timer:any;private clock:any;
  now=new Date();section='Accueil';
@@ -114,6 +115,7 @@ export class AppComponent implements OnInit,OnDestroy{
  }
  ngOnInit(){
   this.wake();
+  this.keepFresh();
   this.refresh();
   this.timer=setInterval(()=>this.refresh(),60000);
   this.clock=setInterval(()=>this.now=new Date(),30000);
@@ -121,6 +123,15 @@ export class AppComponent implements OnInit,OnDestroy{
   // Refresh badges as soon as the user comes back to the tab instead of polling in the background.
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)this.refresh()});
   this.router.events.pipe(filter(e=>e instanceof NavigationEnd)).subscribe(()=>{this.notifsOpen=false;this.menuOpen=false;this.section=this.sectionOf(this.router.url);this.refresh()});
+ }
+ /** Offline cache must never pin an old release: as soon as a new version is downloaded, switch to it. */
+ private keepFresh(){
+  if(!this.sw.isEnabled)return;
+  this.sw.versionUpdates.pipe(filter(e=>e.type==='VERSION_READY')).subscribe(()=>this.sw.activateUpdate().then(()=>location.reload()));
+  this.sw.unrecoverable.subscribe(()=>location.reload());
+  const check=()=>this.sw.checkForUpdate().catch(()=>{});
+  check();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)check()});
  }
  ngOnDestroy(){clearInterval(this.timer);clearInterval(this.clock)}
  /** Breadcrumb label of the current page. */
