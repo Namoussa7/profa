@@ -14,9 +14,8 @@ import {API_BASE_URL} from './core/config/api.config';
  imports:[LogoComponent,IconComponent,RouterLink,RouterLinkActive,RouterOutlet,CommonModule],
  template:`
  <a class="skip-link" href="#main">Aller au contenu</a>
- @if(auth.isLogged()){
- <!-- Signed-in space: floating icon rail (desktop) -->
- <aside class="rail" aria-label="Navigation de votre espace">
+ <!-- Floating icon rail (desktop), for visitors and members -->
+ <aside class="rail" aria-label="Navigation principale">
    <a routerLink="/" class="rail-logo" aria-label="Profa, accueil"><app-logo [size]="40" [word]="false"/></a>
    <nav>
      @for(i of railItems();track i.link){
@@ -25,19 +24,12 @@ import {API_BASE_URL} from './core/config/api.config';
    </nav>
    <div class="rail-foot">
      <a routerLink="/comment-ca-marche" routerLinkActive="on" data-tip="Aide" aria-label="Aide"><app-icon name="help" [size]="20"/></a>
-     <button type="button" data-tip="Déconnexion" aria-label="Déconnexion" (click)="auth.logout()"><app-icon name="logout" [size]="20"/></button>
+     @if(auth.isLogged()){<button type="button" data-tip="Déconnexion" aria-label="Déconnexion" (click)="auth.logout()"><app-icon name="logout" [size]="20"/></button>}
+     @else{<a routerLink="/connexion" routerLinkActive="on" data-tip="Connexion" aria-label="Connexion"><app-icon name="user" [size]="20"/></a>}
    </div>
  </aside>
- }
- <header class="top" [class.app-top]="auth.isLogged()">
+ <header class="top app-top">
    <a routerLink="/" class="brand" aria-label="Profa, accueil"><app-logo [size]="38"/></a>
-   @if(!auth.isLogged()){
-   <nav class="desktop-nav" aria-label="Navigation principale">
-     <a routerLink="/enseignants" routerLinkActive="active">Enseignants</a>
-     @if(showJobs()){<a routerLink="/emplois" routerLinkActive="active">Emplois</a>}
-     <a routerLink="/comment-ca-marche" routerLinkActive="active">Comment ça marche</a>
-   </nav>
-   } @else {
    <div class="crumbs">
      <span class="crumb-pill"><b>Profa</b><i>/</i>{{section}}</span>
      <span class="date-chip"><i class="live"></i>{{now | date:'EEE d MMM'}}<b>{{now | date:'HH:mm'}}</b></span>
@@ -45,11 +37,10 @@ import {API_BASE_URL} from './core/config/api.config';
    <form class="top-search" role="search" (submit)="$event.preventDefault();search(q.value);q.value=''">
      <app-icon name="search" [size]="17"/><input #q id="top-search" name="q" placeholder="Rechercher une matière…" aria-label="Rechercher un enseignant par matière"><kbd>Ctrl K</kbd>
    </form>
-   }
    <div class="actions desktop-actions">
      @if(!auth.isLogged()){
-       <a routerLink="/connexion" class="link">Connexion</a>
-       <a routerLink="/inscription" class="btn ghost">Créer un compte</a>
+       <a routerLink="/connexion" class="pill">Connexion</a>
+       <a routerLink="/inscription" class="pill dark">Créer un compte</a>
      } @else {
        <a routerLink="/messages" class="icon-btn" aria-label="Messages"><app-icon name="message"/>@if(unreadMessages){<b class="badge">{{unreadMessages}}</b>}</a>
        <div class="bell">
@@ -103,7 +94,7 @@ import {API_BASE_URL} from './core/config/api.config';
      <a routerLink="/connexion" routerLinkActive="router-link-active"><span><app-icon name="user" [size]="22"/></span>Connexion</a>
    }
  </nav>`,
- host:{'(document:keydown.escape)':'notifsOpen=false','(document:keydown)':'hotkey($event)','[class.shell]':'auth.isLogged()'}
+ host:{'(document:keydown.escape)':'notifsOpen=false','(document:keydown)':'hotkey($event)','class':'shell'}
 })
 export class AppComponent implements OnInit,OnDestroy{
  auth=inject(AuthService);api=inject(ApiService);router=inject(Router);
@@ -136,11 +127,19 @@ export class AppComponent implements OnInit,OnDestroy{
  sectionOf(url:string){
   const seg=url.split(/[/?#]/)[1]||'';
   return ({'':'Accueil',dashboard:'Mon espace',admin:'Administration',enseignants:'Enseignants',emplois:'Emplois',messages:'Messages',
-   notifications:'Notifications',profil:'Mon profil',certification:'Certification',tarifs:'Tarifs','comment-ca-marche':'Aide'} as any)[seg]||'Profa';
+   notifications:'Notifications',profil:'Mon profil',certification:'Certification',tarifs:'Tarifs','comment-ca-marche':'Aide',connexion:'Connexion',inscription:'Inscription','mot-de-passe-oublie':'Mot de passe',reinitialiser:'Mot de passe'} as any)[seg]||'Profa';
  }
  railItems(){
   const r=this.auth.role();
+  if(!this.auth.isLogged())return [
+   {link:'/',icon:'home',label:'Accueil'},
+   {link:'/enseignants',icon:'cap',label:'Enseignants'},
+   {link:'/emplois',icon:'briefcase',label:'Emplois'},
+   {link:'/tarifs',icon:'wallet',label:'Tarifs'},
+   {link:'/inscription',icon:'sparkle',label:'Créer un compte'},
+  ] as {link:string;icon:string;label:string;dot?:boolean}[];
   return [
+   {link:'/',icon:'home',label:'Accueil'},
    {link:this.auth.home(),icon:'grid',label:r==='ADMIN'?'Administration':'Mon espace'},
    {link:'/enseignants',icon:'cap',label:'Enseignants'},
    ...(this.showJobs()?[{link:'/emplois',icon:'briefcase',label:'Emplois'}]:[]),

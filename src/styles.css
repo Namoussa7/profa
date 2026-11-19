@@ -846,3 +846,54 @@ router-outlet+*{animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
 }
 /* Phones: no backdrop blur (costly on low-end devices), slightly more opaque cards instead. */
 @media(max-width:900px){.card,.modern-dash-grid article,.kpi,.ring-card,.modern-stats>div,.admin-tabs{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(255,255,255,.92)}}
+
+/* =====================================================================
+   V2.7 — the V35 look for every page (visitors included)
+   ===================================================================== */
+/* Glass on public surfaces too */
+.subject-tile,.modern-card,.feature-card,.auth-card,.value-strip>div,.result-badge{background:var(--glass);border-color:var(--glass-line);box-shadow:var(--sh-glass);-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%)}
+.modern-card,.subject-tile,.auth-card{border-radius:22px}
+.filters select{background-color:rgba(255,255,255,.82)}
+.page-hero h1,.profile-head h1{letter-spacing:-.035em;font-weight:800}
+.auth{background:transparent}
+.auth-points span{background:var(--glass);border-color:var(--glass-line);box-shadow:var(--sh-glass)}
+.auth-visual h1 span,.page-hero h1 span{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--primary)}
+
+/* Home */
+.home-v35{max-width:1320px}
+.hello-sub{color:var(--muted);font-size:16.5px;max-width:560px;margin:14px 0 0}
+.glass-search{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:8px;border-radius:999px;background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--sh-glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);max-width:760px}
+.glass-search .field{display:flex;align-items:center;gap:10px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.7);color:var(--muted);min-width:0}
+.glass-search .field input{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;height:46px;min-width:0}
+.glass-search .field:focus-within{box-shadow:var(--ring)}
+.glass-search .btn{height:46px;padding:0 22px}
+.glass-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 30px}
+.glass-chips .pill{height:34px;font-size:13px}
+.tile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tile-grid .subject-tile{grid-template-columns:auto 1fr;align-items:center}
+.monitor-action{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.07);color:#fff;transition:background .15s}
+.monitor-action:hover{background:rgba(255,255,255,.14)}
+.monitor-action>span{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.12);color:#c9d0ff}
+.monitor-action strong{display:block;font-size:14px}.monitor-action small{display:block;color:#9aa6d8;font-size:12px}
+.monitor-action>app-icon{color:#9aa6d8}
+.step-text{margin:0;color:var(--muted);font-size:14px}
+.cta-glass{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;margin:34px 0 0;padding:30px 34px;border-radius:28px;background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--sh-glass)}
+.cta-glass h2{font-size:clamp(24px,2.6vw,34px);letter-spacing:-.03em;margin:12px 0 0;max-width:640px}
+.ring-card .text-link{color:var(--primary);font-weight:700}
+
+/* Footer: light glass card instead of the navy band */
+footer{margin:0 16px 16px;border-radius:28px;background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--sh-glass);color:var(--ink-2);padding:36px 40px}
+footer p{color:var(--muted)}
+.footer-links{color:var(--ink-2)}.footer-links a:hover{color:var(--primary)}
+footer>span{color:var(--faint)}
+@media(min-width:901px){app-root.shell footer{margin-left:100px}}
+
+@media(max-width:1080px){.tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+ .glass-search{grid-template-columns:1fr;border-radius:24px}
+ .glass-search .btn{width:100%}
+ .tile-grid{grid-template-columns:minmax(0,1fr)}
+ .cta-glass{padding:22px}
+ footer{padding:28px 22px 100px}
+}
+@media(max-width:900px){.subject-tile,.modern-card,.feature-card,.auth-card,.value-strip>div{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(255,255,255,.92)}}
