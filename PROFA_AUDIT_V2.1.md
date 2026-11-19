@@ -121,3 +121,12 @@ Interface retenue : **un modèle hybride Preply + Superprof** (recherche matièr
 - **Moins de trafic inutile** : les rafraîchissements automatiques (notifications, messages) s'arrêtent quand l'onglet est en arrière-plan et reprennent au retour.
 - **Responsive vérifié** à 320 px (petits téléphones), 360 px, 768 px (tablette) et 1920 px (grand écran), pour les visiteurs, parents, enseignants, écoles et l'administration (12 onglets) : aucun débordement horizontal. Corrections : bandeaux d'information et carte « Profil complété » du tableau de bord.
 - **Pour des millions d'utilisateurs** : passer le backend et PostgreSQL sur des offres payantes (la base gratuite Render est limitée à 1 Go et expire après 30 jours), puis ajouter des instances backend derrière l'équilibreur de Render ; l'application est déjà sans état (JWT), paginée et indexée pour cela.
+
+## 10. Version 2.6 — interface « Dashboard » (inspirée de la vidéo de référence)
+- **Espace connecté façon application** : barre latérale flottante bleu nuit (icônes avec info-bulles, pastilles de messages et notifications), barre du haut avec fil d'Ariane, date et heure en direct, recherche (raccourci Ctrl K) et carte profil (initiales, nom, rôle).
+- **Accueil personnalisé** : « Bon retour, *Prénom* » avec accent serif italique, fond lavande dégradé, cartes givrées aux grands arrondis, boutons en pilule.
+- **Indicateurs animés** : chiffres qui défilent jusqu'à leur valeur, mini-histogrammes sur 8 semaines (vraies données de réservations, demandes, offres).
+- **« En un coup d'œil »** : jauges circulaires animées par rôle (profil, certification, cours terminés, paiements, offres, formule) et pour l'administrateur (enseignants visibles, comptes actifs, paiements confirmés).
+- **Carte sombre « Activité / Recrutement »** : courbe des 8 dernières semaines, prochain cours ou offre la plus suivie, montants à recevoir, bouton d'action ; liste « Mes enseignants / Mes élèves / Offres récentes ».
+- **Animations d'entrée** discrètes, désactivées si l'appareil demande moins d'animations ; flou d'arrière-plan réservé aux ordinateurs (mobiles plus fluides).
+- **Responsive vérifié** à 320, 1024 et 1440 px pour parent, enseignant, école et administrateur (12 onglets) : aucun débordement. Sur téléphone, la barre latérale laisse la place à la barre de navigation du bas.

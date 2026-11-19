@@ -1,4 +1,6 @@
 import {IconComponent} from '../core/icon.component';
+import {RingComponent} from '../core/ring.component';
+import {CountUpDirective} from '../core/count-up.directive';
 import {Component,inject,OnInit} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
@@ -7,13 +9,25 @@ import {ApiService,errorMessage} from '../core/api.service';
 import {AuthService} from '../core/auth/auth.service';
 import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list,statusClass} from '../core/labels';
 
+/** Counts per week over the last n weeks, oldest first (ahead: the last bucket is the coming week). */
+function weekly(dates:(string|undefined)[],ahead=false,n=8){
+ const out=new Array(n).fill(0),week=7*864e5,end=Date.now()+(ahead?week:1);
+ for(const d of dates){if(!d)continue;const i=n-1-Math.floor((end-new Date(d).getTime())/week);if(i>=0&&i<n)out[i]++}
+ return out;
+}
+/** Bar heights in % for the KPI sparkline (a floor keeps empty weeks visible). */
+function bars(v:number[]){const m=Math.max(1,...v);return v.map(n=>Math.max(14,n/m*100))}
+
 @Component({
  standalone:true,
- imports:[IconComponent,CommonModule,FormsModule,RouterLink],
+ imports:[IconComponent,RingComponent,CountUpDirective,CommonModule,FormsModule,RouterLink],
  template:`
  <section class="dash dashboard-modern">
-   <div class="dash-welcome"><div><div class="eyebrow">VOTRE ESPACE · {{roleLabel()}}</div><h1>Bonjour, {{auth.user?.firstName}}</h1><p>{{intro()}}</p></div>
-     <div class="dash-actions"><a class="btn ghost" routerLink="/profil"><app-icon name="edit" [size]="18"/>Mon profil</a>@if(role==='ADMIN'){<a class="btn" routerLink="/admin">Administration</a>}<button class="btn ghost" (click)="auth.logout()">Déconnexion</button></div></div>
+   <div class="hello-head">
+     <div><span class="hello-chip"><i class="live"></i>Espace {{roleLabel().toLowerCase()}} · {{intro()}}</span>
+       <h1 class="hello">Bon retour,<br><span class="serif">{{auth.user?.firstName}}</span></h1></div>
+     <div class="dash-actions"><a class="pill" routerLink="/profil"><app-icon name="edit" [size]="16"/>Mon profil</a><a class="pill" routerLink="/messages"><app-icon name="message" [size]="16"/>Messages</a><button type="button" class="pill" (click)="auth.logout()"><app-icon name="logout" [size]="16"/>Déconnexion</button></div>
+   </div>
    @if(flash){<p class="success" role="status">{{flash}}</p>}
    @if(error){<p class="error" role="alert">{{error}}</p>}
 
@@ -40,10 +54,51 @@ import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list
    </article>
    }
 
-   @if(role==='TEACHER'||role==='SCHOOL'){
-   <div class="welcome-strip"><div><span><app-icon name="sparkle" [size]="22"/></span><div><strong>{{completion<100?'Complétez votre profil':'Profil complet'}}</strong><p>{{completion<100?'Un profil complet apparaît plus haut dans les résultats et inspire confiance.':'Votre profil est prêt à recevoir des '+(role==='TEACHER'?'élèves.':'candidatures.')}}</p></div></div>
-     <div class="profile-progress"><strong>{{completion}}%</strong><div><div class="progress"><span [style.width.%]="completion"></span></div><small>Profil complété</small></div>@if(completion<100){<a class="btn small" routerLink="/profil">Compléter</a>}</div></div>
-   }
+
+   <div class="v35-grid">
+     <div class="v35-main">
+       <div class="kpi-row">
+         @for(k of stats();track k.label){
+           <div class="kpi"><div class="kpi-top"><span class="kpi-ic"><app-icon [name]="k.icon" [size]="18"/></span><small>{{k.label}}</small></div>
+             <div class="kpi-num"><strong [countUp]="k.value"></strong>@if(k.spark){<span class="spark" aria-hidden="true">@for(h of k.spark;track $index){<i [style.height.%]="h"></i>}</span>}</div>
+             <span class="kpi-hint">{{k.hint}}</span></div>
+         }
+       </div>
+       <h2 class="glance">Votre progression <span class="serif">en un coup d’œil</span></h2>
+       <div class="ring-row">
+         @for(g of gauges();track g.label){
+           <article class="ring-card">
+             <div class="ring-card-head"><span class="kpi-ic"><app-icon [name]="g.icon" [size]="18"/></span><div><strong>{{g.label}}</strong><small>{{g.sub}}</small></div></div>
+             <div class="ring-card-body"><app-ring [value]="g.value" [color]="g.color" [label]="g.label" [caption]="g.caption||''"/>
+               <ul>@for(l of g.lines;track l[0]){<li><span>{{l[0]}}</span><b>{{l[1]}}</b></li>}</ul></div>
+             @if(g.link){<a class="text-link" [routerLink]="g.link">{{g.cta}} <app-icon name="arrow" [size]="14"/></a>}
+           </article>
+         }
+       </div>
+     </div>
+
+     <aside class="v35-side">
+       <article class="monitor">
+         <div class="monitor-head"><strong>{{role==='SCHOOL'?'Recrutement':'Activité'}}</strong><span class="monitor-chip">8 semaines</span></div>
+         <svg class="monitor-chart" viewBox="0 0 240 80" preserveAspectRatio="none" role="img" [attr.aria-label]="'Activité des 8 dernières semaines : '+activity().join(', ')">
+           <defs><linearGradient id="mon-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c8cff" stop-opacity=".45"/><stop offset="1" stop-color="#7c8cff" stop-opacity="0"/></linearGradient></defs>
+           <path [attr.d]="chart().area" fill="url(#mon-area)"/><path [attr.d]="chart().line" class="monitor-line"/>
+         </svg>
+         <div class="monitor-next">
+           @if(nextItem(); as n){<small>{{n.kicker}}</small><strong>{{n.title}}</strong><span>{{n.sub}}</span>}
+           @else{<small>{{role==='SCHOOL'?'Aucune offre':'Aucun cours prévu'}}</small><span>{{role==='SCHOOL'?'Publiez une offre pour recevoir des candidatures.':'Vos prochains cours apparaîtront ici.'}}</span>}
+         </div>
+         <div class="monitor-kpis">@for(m of monitorKpis();track m.label){<div><small>{{m.label}}</small><strong><span [countUp]="m.value"></span>@if(m.unit){<em>{{m.unit}}</em>}</strong></div>}</div>
+         <a class="monitor-cta" [routerLink]="monitorCta().link">{{monitorCta().label}}<app-icon name="arrow" [size]="15"/></a>
+       </article>
+       <article class="card people">
+         <div class="section-row"><h3>{{peopleTitle()}}</h3><span class="live-chip"><i class="live"></i>{{people().length}}</span></div>
+         @for(p of people();track p.id){
+           <a class="person" [routerLink]="p.link"><span class="avatar">{{p.initials}}</span><span><b>{{p.name}}</b><small>{{p.sub}}</small></span>@if(p.tag){<em [class.ok]="p.ok">{{p.tag}}</em>}</a>
+         } @empty {<p class="empty-inline">{{role==='PARENT'?'Ajoutez des enseignants en favoris avec le cœur depuis la recherche.':role==='SCHOOL'?'Aucune offre publiée.':'Vos élèves apparaîtront ici.'}}</p>}
+       </article>
+     </aside>
+   </div>
 
    @if(role==='TEACHER'&&cert){
    <article class="card block cert-card" [class.done]="cert.certified">
@@ -88,9 +143,6 @@ import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list
    </article>
    }
 
-   <div class="stats modern-stats">
-     @for(s of stats();track s.label){<div><span class="stat-icon"><app-icon [name]="s.icon" [size]="22"/></span><small>{{s.label}}</small><strong>{{s.value}}</strong><span>{{s.hint}}</span></div>}
-   </div>
 
    <!-- PARENT & TEACHER : réservations -->
    @if(role==='PARENT'||role==='TEACHER'){
@@ -145,12 +197,6 @@ import {APP_STATUSES,DOC_TYPES,REQUIRED_DOCS,MODES,PAY_METHODS,STATUS,label,list
    </article>
    }
 
-   @if(role==='PARENT'){
-   <article class="card block">
-     <div class="section-row"><div><h3><span class="h-ic"><app-icon name="heart" [size]="18"/></span>Enseignants favoris</h3><small>Retrouvez vos profils sauvegardés</small></div></div>
-     <div class="fav-row">@for(t of favorites;track t.id){<a class="fav-card" [routerLink]="['/enseignants',t.id]"><strong>{{t.firstName}} {{t.lastName}}</strong><small>{{t.headline||'Enseignant'}}</small><b>{{t.hourlyRate||0 | number}} FCFA/h</b></a>}@empty{<p class="empty-inline">Ajoutez des enseignants en favoris avec le cœur depuis la recherche.</p>}</div>
-   </article>
-   }
 
    @if(role==='TEACHER'){
    <div class="modern-dash-grid">
@@ -213,7 +259,7 @@ export class DashboardComponent implements OnInit{
   this.load();
  }
  roleLabel(){return ({TEACHER:'ENSEIGNANT',SCHOOL:'ÉCOLE',PARENT:'PARENT / ÉLÈVE',ADMIN:'ADMIN'} as any)[this.role||'']||''}
- intro(){return this.role==='TEACHER'?'Gérez vos demandes, vos cours et votre vérification.':this.role==='SCHOOL'?'Pilotez vos offres et vos candidatures.':'Suivez vos demandes, vos cours et vos paiements.'}
+ intro(){return this.role==='TEACHER'?'vos cours et votre vérification':this.role==='SCHOOL'?'vos offres et vos candidatures':'vos cours et vos paiements'}
  private ok(msg:string){this.flash=msg;this.error='';setTimeout(()=>this.flash='',4000)}
  private ko(e:any){this.error=errorMessage(e);this.flash=''}
 
@@ -256,21 +302,81 @@ export class DashboardComponent implements OnInit{
    :[p.name,p.city,p.address,p.description,p.phone,p.logoUrl,p.website];
   this.completion=Math.round(checks.filter(Boolean).length/checks.length*100);
  }
- stats(){
+ stats():{icon:string;label:string;value:number;hint:string;spark?:number[]}[]{
   const upcoming=this.bookings.filter(b=>['PENDING_PAYMENT','CONFIRMED'].includes(b.status)).length;
   const pendingReq=this.requests.filter(r=>r.status==='PENDING').length;
+  const bookSpark=bars(weekly(this.bookings.map(b=>b.startsAt),true)),reqSpark=bars(weekly(this.requests.map(r=>r.createdAt)));
   if(this.role==='PARENT')return[
-   {icon:'calendar',label:'Cours à venir',value:upcoming,hint:'Réservations actives'},
+   {icon:'calendar',label:'Cours à venir',value:upcoming,hint:'Réservations actives',spark:bookSpark},
    {icon:'wallet',label:'À payer',value:this.bookings.filter(b=>b.paymentStatus!=='PAID'&&b.status!=='CANCELLED').length,hint:'Paiements en attente'},
    {icon:'message',label:'Messages',value:this.unreadMessages,hint:'Non lu(s)'}];
   if(this.role==='TEACHER')return[
-   {icon:'send',label:'Demandes',value:pendingReq,hint:'En attente de réponse'},
-   {icon:'calendar',label:'Cours à venir',value:upcoming,hint:'Réservations actives'},
+   {icon:'send',label:'Demandes',value:pendingReq,hint:'En attente de réponse',spark:reqSpark},
+   {icon:'calendar',label:'Cours à venir',value:upcoming,hint:'Réservations actives',spark:bookSpark},
    {icon:'message',label:'Messages',value:this.unreadMessages,hint:'Non lu(s)'}];
   return[
-   {icon:'briefcase',label:'Offres ouvertes',value:this.jobs.filter(j=>j.status==='OPEN').length,hint:'Visibles des enseignants'},
+   {icon:'briefcase',label:'Offres ouvertes',value:this.jobs.filter(j=>j.status==='OPEN').length,hint:'Visibles des enseignants',spark:bars(weekly(this.jobs.map(j=>j.createdAt)))},
    {icon:'file',label:'Candidatures',value:this.jobs.reduce((s,j)=>s+(j.applicationsCount||0),0),hint:'Toutes offres'},
    {icon:'message',label:'Messages',value:this.unreadMessages,hint:'Non lu(s)'}];
+ }
+ /** "At a glance" gauges, per role. */
+ gauges():{icon:string;label:string;sub:string;value:number;color:string;lines:[string,string][];caption?:string;link?:string;cta?:string}[]{
+  const live=this.bookings.filter(b=>b.status!=='CANCELLED');
+  const done=live.filter(b=>b.status==='COMPLETED').length,upcoming=live.length-done;
+  const pct=(a:number,b:number)=>b?a/b*100:0;
+  if(this.role==='TEACHER'){
+   const steps=this.cert?.steps?.length||0;
+   return[
+    {icon:'user',label:'Profil',sub:'Fiche publique',value:this.completion,color:'#3b5bfd',lines:[['Dossier PDF',this.docsComplete()?'Complet':'Incomplet'],['Tarif',(this.profile?.hourlyRate||0).toLocaleString('fr-FR')+' F/h']],link:this.completion<100?'/profil':undefined,cta:'Compléter'},
+    {icon:'shield',label:'Certification',sub:'Badge Certifié Profa',value:pct(this.certDone(),steps),color:'#f5a524',lines:[['Étapes',this.certDone()+' / '+steps],['Statut',this.cert?.certified?'Certifié':this.cert?.suspended?'Suspendu':'En cours']],link:'/certification',cta:this.cert?.certified?'Voir':'Continuer'},
+    {icon:'calendar',label:'Cours',sub:'Taux de cours terminés',value:pct(done,live.length),color:'#12b886',lines:[['Terminés',String(done)],['À venir',String(upcoming)]]}];
+  }
+  if(this.role==='PARENT'){
+   const paid=live.filter(b=>b.paymentStatus==='PAID').length;
+   const acc=this.requests.filter(r=>r.status==='ACCEPTED').length,wait=this.requests.filter(r=>r.status==='PENDING').length;
+   return[
+    {icon:'calendar',label:'Cours',sub:'Taux de cours terminés',value:pct(done,live.length),color:'#3b5bfd',lines:[['Terminés',String(done)],['À venir',String(upcoming)]],link:'/enseignants',cta:'Réserver un cours'},
+    {icon:'wallet',label:'Paiements',sub:'Cours réglés',value:pct(paid,live.length),color:'#f5a524',lines:[['Payés',String(paid)],['À payer',String(live.length-paid)]]},
+    {icon:'send',label:'Demandes',sub:'Acceptées par un enseignant',value:pct(acc,this.requests.length),color:'#12b886',lines:[['Acceptées',String(acc)],['En attente',String(wait)]]}];
+  }
+  const open=this.jobs.filter(j=>j.status==='OPEN').length,limit=this.billing?.plan?.offerLimit;
+  return[
+   {icon:'school',label:'Profil école',sub:'Fiche publique',value:this.completion,color:'#3b5bfd',lines:[['Ville',this.profile?.city||'—'],['Site web',this.profile?.website?'Oui':'Non']],link:this.completion<100?'/profil':undefined,cta:'Compléter'},
+   {icon:'briefcase',label:'Offres',sub:'Offres ouvertes',value:pct(open,this.jobs.length),color:'#f5a524',lines:[['Ouvertes',String(open)],['Fermées',String(this.jobs.length-open)]],link:'/emplois',cta:'Publier une offre'},
+   {icon:'star',label:'Formule',sub:this.billing?this.planLabel(this.billing.plan.code):'—',value:limit?pct(this.billing.openOffers,limit):100,caption:limit?'utilisé':'illimité',color:'#12b886',lines:[['Offres',(this.billing?.openOffers??open)+' / '+(limit||'∞')],['Accès CV',this.billing?.plan?.cvAccess?'Inclus':'Non']],link:'/tarifs',cta:'Comparer'}];
+ }
+ /** Weekly activity for the dark side card. */
+ activity(){return this.role==='SCHOOL'?weekly(this.jobs.map(j=>j.createdAt)):weekly(this.bookings.map(b=>b.startsAt),true)}
+ chart(){
+  const v=this.activity(),max=Math.max(1,...v),pts=v.map((n,i)=>[i*240/(v.length-1),72-n/max*60]);
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return {line,area:line+' L240 80 L0 80 Z'};
+ }
+ nextItem(){
+  if(this.role==='SCHOOL'){
+   const j=[...this.jobs].sort((a,b)=>(b.applicationsCount||0)-(a.applicationsCount||0))[0];
+   return j?{kicker:'Offre la plus suivie',title:j.title,sub:(j.applicationsCount||0)+' candidature(s) · '+(j.city||'Mali')}:null;
+  }
+  const now=Date.now(),b=this.bookings.filter(x=>['PENDING_PAYMENT','CONFIRMED'].includes(x.status)&&new Date(x.startsAt).getTime()>now)
+   .sort((a,c)=>new Date(a.startsAt).getTime()-new Date(c.startsAt).getTime())[0];
+  return b?{kicker:'Prochain cours',title:this.role==='PARENT'?b.teacherName:b.parentName,
+   sub:new Date(b.startsAt).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · '+label(MODES,b.mode)}:null;
+ }
+ monitorKpis():{label:string;value:number;unit?:string}[]{
+  if(this.role==='TEACHER')return[{label:'À recevoir',value:this.earnings?.pendingBalance||0,unit:'F'},{label:'Total gagné',value:this.earnings?.totalEarned||0,unit:'F'}];
+  if(this.role==='PARENT')return[{label:'Payé',value:this.bookings.filter(b=>b.paymentStatus==='PAID').reduce((s,b)=>s+(b.amount||0),0),unit:'F'},{label:'Favoris',value:this.favorites.length}];
+  return[{label:'Candidatures',value:this.jobs.reduce((s,j)=>s+(j.applicationsCount||0),0)},{label:'Offres',value:this.jobs.length}];
+ }
+ monitorCta(){return this.role==='PARENT'?{link:'/enseignants',label:'Réserver un cours'}:this.role==='SCHOOL'?{link:'/emplois',label:'Publier une offre'}:{link:'/messages',label:'Ouvrir la messagerie'}}
+ peopleTitle(){return this.role==='PARENT'?'Mes enseignants':this.role==='SCHOOL'?'Offres récentes':'Mes élèves'}
+ /** Side list: favourite teachers (parent), students (teacher) or latest offers (school). */
+ people():{id:string;name:string;sub:string;initials:string;link:any;tag?:string;ok?:boolean}[]{
+  const ini=(n:string)=>(n||'?').split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  if(this.role==='PARENT')return this.favorites.slice(0,5).map(t=>({id:t.id,name:t.firstName+' '+t.lastName,sub:t.headline||'Enseignant',initials:ini(t.firstName+' '+t.lastName),link:['/enseignants',t.id],tag:t.certified?'Certifié':t.verified?'Vérifié':'',ok:true}));
+  if(this.role==='SCHOOL')return this.jobs.slice(0,5).map(j=>({id:j.id,name:j.title,sub:(j.applicationsCount||0)+' candidature(s)',initials:ini(j.subject||j.title),link:'/emplois',tag:j.status==='OPEN'?'Ouverte':'Fermée',ok:j.status==='OPEN'}));
+  const seen=new Map<string,any>();
+  for(const b of this.bookings){if(!b.parentId)continue;const e=seen.get(b.parentId)||{id:b.parentId,name:b.parentName,n:0};e.n++;seen.set(b.parentId,e)}
+  return [...seen.values()].slice(0,5).map(e=>({id:e.id,name:e.name,sub:e.n+' cours',initials:ini(e.name),link:'/messages',tag:'Élève',ok:true}));
  }
  bookingStatus(b:any,value:string){
   if(value==='CANCELLED'&&!confirm('Annuler cette réservation ?'))return;

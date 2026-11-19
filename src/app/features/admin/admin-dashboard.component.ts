@@ -5,6 +5,8 @@ import {RouterLink} from '@angular/router';
 import {ApiService,Page,errorMessage} from '../../core/api.service';
 import {AuthService} from '../../core/auth/auth.service';
 import {IconComponent} from '../../core/icon.component';
+import {RingComponent} from '../../core/ring.component';
+import {CountUpDirective} from '../../core/count-up.directive';
 import {DOC_TYPES,LEVELS,REPORT_REASONS,ROLES,STATUS,SUBJECTS,label,statusClass} from '../../core/labels';
 
 type Tab='overview'|'billing'|'certification'|'users'|'teachers'|'documents'|'schools'|'jobs'|'bookings'|'payments'|'reviews'|'audit';
@@ -16,12 +18,13 @@ const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/
 
 @Component({
  standalone:true,
- imports:[CommonModule,FormsModule,RouterLink,IconComponent],
+ imports:[CommonModule,FormsModule,RouterLink,IconComponent,RingComponent,CountUpDirective],
  template:`
  <section class="page admin-page">
-   <div class="admin-hero">
-     <div><div class="eyebrow">Centre de contrôle</div><h1>Administration</h1><p>Comptes, vérification des enseignants, recrutement, paiements et modération.</p></div>
-     <div class="dash-actions"><button class="btn" (click)="openCreate()"><app-icon name="user" [size]="18"/>Créer un compte</button><button class="btn ghost" (click)="auth.logout()"><app-icon name="logout" [size]="18"/>Déconnexion</button></div>
+   <div class="hello-head">
+     <div><span class="hello-chip"><i class="live"></i>Centre de contrôle · comptes, vérification, paiements et modération</span>
+       <h1 class="hello">Bon retour,<br><span class="serif">{{auth.user?.firstName||'Admin'}}</span></h1></div>
+     <div class="dash-actions"><button type="button" class="pill dark" (click)="openCreate()"><app-icon name="user" [size]="16"/>Créer un compte</button><button type="button" class="pill" (click)="auth.logout()"><app-icon name="logout" [size]="16"/>Déconnexion</button></div>
    </div>
 
    @if(flash){<p class="success" role="status">{{flash}}</p>}
@@ -30,12 +33,12 @@ const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/
 
    @if(stats){
    <div class="stats modern-stats admin-stats">
-     <div><span class="stat-icon"><app-icon name="users" [size]="22"/></span><small>Utilisateurs</small><strong>{{stats.users|number}}</strong><span>{{stats.activeUsers|number}} actifs · {{stats.parents|number}} parents</span></div>
-     <div><span class="stat-icon"><app-icon name="cap" [size]="22"/></span><small>Enseignants</small><strong>{{stats.teachers|number}}</strong><span>{{stats.teachersPublic|number}} visibles · {{stats.pendingTeachers|number}} à vérifier</span></div>
-     <div><span class="stat-icon"><app-icon name="file" [size]="22"/></span><small>Documents à vérifier</small><strong>{{stats.pendingDocuments|number}}</strong><span>CV, diplômes, pièces</span></div>
-     <div><span class="stat-icon"><app-icon name="school" [size]="22"/></span><small>Écoles</small><strong>{{stats.schools|number}}</strong><span>{{stats.openJobs|number}} offres ouvertes</span></div>
-     <div><span class="stat-icon"><app-icon name="calendar" [size]="22"/></span><small>Réservations</small><strong>{{stats.bookings|number}}</strong><span>{{stats.pendingBookings|number}} à payer</span></div>
-     <div><span class="stat-icon"><app-icon name="wallet" [size]="22"/></span><small>Paiements</small><strong>{{stats.payments|number}}</strong><span>{{stats.pendingPayments|number}} en attente</span></div>
+     <div><span class="stat-icon"><app-icon name="users" [size]="22"/></span><small>Utilisateurs</small><strong [countUp]="stats.users"></strong><span>{{stats.activeUsers|number}} actifs · {{stats.parents|number}} parents</span></div>
+     <div><span class="stat-icon"><app-icon name="cap" [size]="22"/></span><small>Enseignants</small><strong [countUp]="stats.teachers"></strong><span>{{stats.teachersPublic|number}} visibles · {{stats.pendingTeachers|number}} à vérifier</span></div>
+     <div><span class="stat-icon"><app-icon name="file" [size]="22"/></span><small>Documents à vérifier</small><strong [countUp]="stats.pendingDocuments"></strong><span>CV, diplômes, pièces</span></div>
+     <div><span class="stat-icon"><app-icon name="school" [size]="22"/></span><small>Écoles</small><strong [countUp]="stats.schools"></strong><span>{{stats.openJobs|number}} offres ouvertes</span></div>
+     <div><span class="stat-icon"><app-icon name="calendar" [size]="22"/></span><small>Réservations</small><strong [countUp]="stats.bookings"></strong><span>{{stats.pendingBookings|number}} à payer</span></div>
+     <div><span class="stat-icon"><app-icon name="wallet" [size]="22"/></span><small>Paiements</small><strong [countUp]="stats.payments"></strong><span>{{stats.pendingPayments|number}} en attente</span></div>
    </div>
    }
 
@@ -45,6 +48,20 @@ const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/
 
    <!-- ============ OVERVIEW ============ -->
    @if(tab==='overview'){
+   @if(stats){
+   <h2 class="glance">La plateforme <span class="serif">en un coup d’œil</span></h2>
+   <div class="ring-row">
+     <article class="ring-card"><div class="ring-card-head"><span class="kpi-ic"><app-icon name="cap" [size]="18"/></span><div><strong>Enseignants visibles</strong><small>Dossier complet et validé</small></div></div>
+       <div class="ring-card-body"><app-ring [value]="ratio(stats.teachersPublic,stats.teachers)" color="#3b5bfd" label="Enseignants visibles"/><ul><li><span>Visibles</span><b>{{stats.teachersPublic|number}}</b></li><li><span>À vérifier</span><b>{{stats.pendingTeachers|number}}</b></li></ul></div>
+       <button class="text-link" (click)="go('teachers')">Voir les enseignants <app-icon name="arrow" [size]="14"/></button></article>
+     <article class="ring-card"><div class="ring-card-head"><span class="kpi-ic"><app-icon name="users" [size]="18"/></span><div><strong>Comptes actifs</strong><small>Utilisateurs non désactivés</small></div></div>
+       <div class="ring-card-body"><app-ring [value]="ratio(stats.activeUsers,stats.users)" color="#f5a524" label="Comptes actifs"/><ul><li><span>Actifs</span><b>{{stats.activeUsers|number}}</b></li><li><span>Parents</span><b>{{stats.parents|number}}</b></li></ul></div>
+       <button class="text-link" (click)="go('users')">Gérer les comptes <app-icon name="arrow" [size]="14"/></button></article>
+     <article class="ring-card"><div class="ring-card-head"><span class="kpi-ic"><app-icon name="wallet" [size]="18"/></span><div><strong>Paiements confirmés</strong><small>Sur tous les paiements</small></div></div>
+       <div class="ring-card-body"><app-ring [value]="ratio(stats.payments-stats.pendingPayments,stats.payments)" color="#12b886" label="Paiements confirmés"/><ul><li><span>En attente</span><b>{{stats.pendingPayments|number}}</b></li><li><span>Réservations à payer</span><b>{{stats.pendingBookings|number}}</b></li></ul></div>
+       <button class="text-link" (click)="go('payments')">Voir les paiements <app-icon name="arrow" [size]="14"/></button></article>
+   </div>
+   }
    <div class="admin-grid">
      <article class="card">
        <div class="section-row"><h3><span class="h-ic"><app-icon name="file" [size]="18"/></span>Documents à vérifier</h3><button class="text-link" (click)="go('documents')">Tout voir</button></div>
@@ -386,6 +403,8 @@ const ENDPOINTS:{[k:string]:string}={users:'/api/v1/admin/users',teachers:'/api/
  </ng-template>`
 })
 export class AdminDashboardComponent implements OnInit{
+ /** Share in % (0 when there is nothing to count). */
+ ratio(part:number,total:number){return total?Math.round((part||0)/total*100):0}
  api=inject(ApiService);auth=inject(AuthService);
  DOC_TYPES=DOC_TYPES;ROLES=ROLES;STATUS=STATUS;L=label;sc=statusClass;roleKeys=Object.keys(ROLES);
  meId=this.auth.userId();

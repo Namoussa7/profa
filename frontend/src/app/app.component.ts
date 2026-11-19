@@ -14,13 +14,38 @@ import {API_BASE_URL} from './core/config/api.config';
  imports:[LogoComponent,IconComponent,RouterLink,RouterLinkActive,RouterOutlet,CommonModule],
  template:`
  <a class="skip-link" href="#main">Aller au contenu</a>
- <header class="top">
+ @if(auth.isLogged()){
+ <!-- Signed-in space: floating icon rail (desktop) -->
+ <aside class="rail" aria-label="Navigation de votre espace">
+   <a routerLink="/" class="rail-logo" aria-label="Profa, accueil"><app-logo [size]="40" [word]="false"/></a>
+   <nav>
+     @for(i of railItems();track i.link){
+       <a [routerLink]="i.link" routerLinkActive="on" [routerLinkActiveOptions]="{exact:i.link==='/'}" [attr.data-tip]="i.label" [attr.aria-label]="i.label"><app-icon [name]="i.icon" [size]="20"/>@if(i.dot){<b class="dot"></b>}</a>
+     }
+   </nav>
+   <div class="rail-foot">
+     <a routerLink="/comment-ca-marche" routerLinkActive="on" data-tip="Aide" aria-label="Aide"><app-icon name="help" [size]="20"/></a>
+     <button type="button" data-tip="Déconnexion" aria-label="Déconnexion" (click)="auth.logout()"><app-icon name="logout" [size]="20"/></button>
+   </div>
+ </aside>
+ }
+ <header class="top" [class.app-top]="auth.isLogged()">
    <a routerLink="/" class="brand" aria-label="Profa, accueil"><app-logo [size]="38"/></a>
+   @if(!auth.isLogged()){
    <nav class="desktop-nav" aria-label="Navigation principale">
      <a routerLink="/enseignants" routerLinkActive="active">Enseignants</a>
      @if(showJobs()){<a routerLink="/emplois" routerLinkActive="active">Emplois</a>}
      <a routerLink="/comment-ca-marche" routerLinkActive="active">Comment ça marche</a>
    </nav>
+   } @else {
+   <div class="crumbs">
+     <span class="crumb-pill"><b>Profa</b><i>/</i>{{section}}</span>
+     <span class="date-chip"><i class="live"></i>{{now | date:'EEE d MMM'}}<b>{{now | date:'HH:mm'}}</b></span>
+   </div>
+   <form class="top-search" role="search" (submit)="$event.preventDefault();search(q.value);q.value=''">
+     <app-icon name="search" [size]="17"/><input #q id="top-search" name="q" placeholder="Rechercher une matière…" aria-label="Rechercher un enseignant par matière"><kbd>Ctrl K</kbd>
+   </form>
+   }
    <div class="actions desktop-actions">
      @if(!auth.isLogged()){
        <a routerLink="/connexion" class="link">Connexion</a>
@@ -38,8 +63,7 @@ import {API_BASE_URL} from './core/config/api.config';
            </div>
          }
        </div>
-       <a routerLink="/profil" class="icon-btn" aria-label="Mon profil"><app-icon name="user"/></a>
-       <a [routerLink]="auth.home()" class="btn"><app-icon name="grid" [size]="18"/>Mon espace</a>
+       <a routerLink="/profil" class="me-chip" aria-label="Mon profil"><span class="avatar">{{initials()}}</span><span><b>{{auth.user?.firstName}} {{auth.user?.lastName}}</b><small>{{roleName()}}</small></span><app-icon name="chevron" [size]="16"/></a>
      }
    </div>
    <button class="mobile-menu" type="button" aria-label="Menu" [attr.aria-expanded]="menuOpen" (click)="menuOpen=!menuOpen"><app-icon [name]="menuOpen?'x':'menu'"/></button>
@@ -61,11 +85,13 @@ import {API_BASE_URL} from './core/config/api.config';
  </div>
  @if(waking){<div class="wake-banner" role="status"><span class="spinner"></span>Démarrage du serveur Profa… cela peut prendre jusqu’à une minute la première fois.</div>}
  <main id="main"><router-outlet/></main>
+ @if(!auth.isLogged()){
  <footer>
    <div><a routerLink="/" class="footer-brand" aria-label="Profa, accueil"><app-logo [size]="36" [light]="true"/></a><p>La plateforme qui connecte les talents de l'éducation au Mali et en Afrique.</p></div>
    <div class="footer-links"><a routerLink="/enseignants">Trouver un enseignant</a>@if(showJobs()){<a routerLink="/emplois">Offres d'emploi</a>}<a routerLink="/comment-ca-marche">Comment ça marche</a><a routerLink="/tarifs">Tarifs</a><a routerLink="/inscription">Devenir enseignant</a></div>
    <span>© 2026 Profa</span>
  </footer>
+ }
  <nav class="bottom-nav" aria-label="Navigation mobile">
    <a routerLink="/" routerLinkActive="router-link-active" [routerLinkActiveOptions]="{exact:true}"><span><app-icon name="home" [size]="22"/></span>Accueil</a>
    <a routerLink="/enseignants" routerLinkActive="router-link-active"><span><app-icon name="cap" [size]="22"/></span>Profs</a>
@@ -77,12 +103,13 @@ import {API_BASE_URL} from './core/config/api.config';
      <a routerLink="/connexion" routerLinkActive="router-link-active"><span><app-icon name="user" [size]="22"/></span>Connexion</a>
    }
  </nav>`,
- host:{'(document:keydown.escape)':'notifsOpen=false'}
+ host:{'(document:keydown.escape)':'notifsOpen=false','(document:keydown)':'hotkey($event)','[class.shell]':'auth.isLogged()'}
 })
 export class AppComponent implements OnInit,OnDestroy{
  auth=inject(AuthService);api=inject(ApiService);router=inject(Router);
  menuOpen=false;notifsOpen=false;notifs:any[]=[];unreadNotifs=0;unreadMessages=0;
- private timer:any;
+ private timer:any;private clock:any;
+ now=new Date();section='Accueil';
 
  /** Free hosting puts the API to sleep: wake it up immediately and tell the user if it is slow. */
  waking=false;
@@ -98,11 +125,37 @@ export class AppComponent implements OnInit,OnDestroy{
   this.wake();
   this.refresh();
   this.timer=setInterval(()=>this.refresh(),60000);
+  this.clock=setInterval(()=>this.now=new Date(),30000);
+  this.section=this.sectionOf(this.router.url);
   // Refresh badges as soon as the user comes back to the tab instead of polling in the background.
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)this.refresh()});
-  this.router.events.pipe(filter(e=>e instanceof NavigationEnd)).subscribe(()=>{this.notifsOpen=false;this.menuOpen=false;this.refresh()});
+  this.router.events.pipe(filter(e=>e instanceof NavigationEnd)).subscribe(()=>{this.notifsOpen=false;this.menuOpen=false;this.section=this.sectionOf(this.router.url);this.refresh()});
  }
- ngOnDestroy(){clearInterval(this.timer)}
+ ngOnDestroy(){clearInterval(this.timer);clearInterval(this.clock)}
+ /** Breadcrumb label of the current page. */
+ sectionOf(url:string){
+  const seg=url.split(/[/?#]/)[1]||'';
+  return ({'':'Accueil',dashboard:'Mon espace',admin:'Administration',enseignants:'Enseignants',emplois:'Emplois',messages:'Messages',
+   notifications:'Notifications',profil:'Mon profil',certification:'Certification',tarifs:'Tarifs','comment-ca-marche':'Aide'} as any)[seg]||'Profa';
+ }
+ railItems(){
+  const r=this.auth.role();
+  return [
+   {link:this.auth.home(),icon:'grid',label:r==='ADMIN'?'Administration':'Mon espace'},
+   {link:'/enseignants',icon:'cap',label:'Enseignants'},
+   ...(this.showJobs()?[{link:'/emplois',icon:'briefcase',label:'Emplois'}]:[]),
+   {link:'/messages',icon:'message',label:'Messages',dot:this.unreadMessages>0},
+   {link:'/notifications',icon:'bell',label:'Notifications',dot:this.unreadNotifs>0},
+   ...(r==='TEACHER'?[{link:'/certification',icon:'shield',label:'Certification'}]:[]),
+   {link:'/tarifs',icon:'wallet',label:'Tarifs'},
+   {link:'/profil',icon:'user',label:'Mon profil'},
+  ] as {link:string;icon:string;label:string;dot?:boolean}[];
+ }
+ initials(){const u=this.auth.user;return ((u?.firstName||'?').charAt(0)+(u?.lastName||'').charAt(0)).toUpperCase()}
+ roleName(){return ({TEACHER:'Enseignant',SCHOOL:'École',PARENT:'Parent / élève',ADMIN:'Administrateur'} as any)[this.auth.role()||'']||''}
+ search(q:string){q=q.trim();this.router.navigate(['/enseignants'],{queryParams:q?{subject:q}:{}})}
+ /** Ctrl/⌘ + K focuses the search field, as in the top bar hint. */
+ hotkey(e:KeyboardEvent){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){const i=document.getElementById('top-search');if(i){e.preventDefault();i.focus()}}}
  refresh(){
   if(document.hidden)return;
   if(!this.auth.isLogged()){this.unreadNotifs=0;this.unreadMessages=0;return}
